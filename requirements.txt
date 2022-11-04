@@ -1,0 +1,5 @@
+pyadi-iio
+numpy
+matplotlib
+bokeh
+tqdm
