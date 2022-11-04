@@ -1,4 +1,4 @@
-time:03Nov1450
+time:04Nov1101
 doi_size:1.5
 num_iter:1
 num_devices:20

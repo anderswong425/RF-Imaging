@@ -6,7 +6,8 @@ def main():
 
     parameters['time'] = time.strftime('%d%b%H%M', time.localtime())
     parameters['doi_size'] = 1.5
-    parameters['num_iter'] = 1
+    parameters['alpha'] = 1e2
+    parameters['num_iter'] = 1,
     parameters['num_devices'] = 20
     parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
 
@@ -15,7 +16,7 @@ def main():
     parameters['center_freq'] = 2.35e9  # Hz 2.4e9
     parameters['bandwidth'] = 10  # Hz
     parameters['transmitter_attenuation'] = 0  # dB
-    parameters['receiver_gain'] = 30  # dB
+    parameters['receiver_gain'] = 40,  # dB
     parameters['grid_resolution'] = 0.05
     parameters['detection_size'] = 0.1
 

@@ -1,58 +1,38 @@
 from functions import *
+from inverse_RTI import inverse_RTI_preparation, output_visualization
 
 
 def main():
-    parameters = {
-        'sample_rate': 1e6,  # Hz
-        'num_samples': 10000,  # number of samples per call to rx()
-        'center_freq': 2.35e9,  # Hz 2.4e9
-        'bandwidth': 10,  # Hz
-        'transmitter_attenuation': 0,  # dB
-        'receiver_gain': 0,  # dB
+    parameters = {}
 
-        'size': 1.5,
-        'num_iter': 10,
-        # 'device_indices': [1, 6, 11, 16],
-        'device_indices': [x+1 for x in range(20)],
+    parameters['time'] = time.strftime('%d%b%H%M', time.localtime())
+    parameters['doi_size'] = 1.5
+    parameters['alpha'] = 1e2
 
-        'time': time.strftime('%d%b%H%M', time.localtime())
-    }
+    parameters['num_devices'] = 20
+    parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
 
-    with open('result\\parameters.txt', 'w') as data:
-        for key, value in parameters.items():
-            data.write('%s:%s\n' % (key, value))
+    parameters['sample_rate'] = 1e6  # Hz
+    parameters['num_samples'] = 1000  # number of samples per call to rx()
+    parameters['center_freq'] = 2.35e9  # Hz 2.4e9
+    parameters['bandwidth'] = 10  # Hz
+    parameters['transmitter_attenuation'] = 0  # dB
+    parameters['receiver_gain'] = 40  # dB
+    parameters['grid_resolution'] = 0.05
+    parameters['detection_size'] = 0.1
 
     signal = generate_signal()
 
     devices = init_devices(parameters)
 
-    parameters['gain_table'] = generate_gain_table(parameters, devices, signal)
-    with open('result\\gain_table.txt', 'w') as data:
-        for key, value in parameters.items():
-            data.write('%s:%s\n' % (key, value))
+    Pinc = data_collection_once(parameters, signal, devices)
+    Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
+    Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
 
-    for i in range(22):
-        parameters['time'] = time.strftime('%d%b%H%M', time.localtime())
-        dataset, time_sequence = data_collection(parameters, signal, devices)
-        time.sleep(30)
+    RTI_matrix = inverse_RTI_preparation(parameters)
 
-    # plot_dashboard(parameters, dataset, time_sequence, True)
-    # magnitude_plot(parameters, dataset, time_sequence)
-
-    # plot_non_interative(parameters, dataset, time_sequence)
+    output_visualization(parameters, signal, devices, Pinc, RTI_matrix)
 
 
 if __name__ == '__main__':
     main()
-    # for i in range(22):
-    #     main()
-    #     time.sleep(30)
-
-    # i = 0
-    # while i < 13:
-    #     if int(time.strftime('%M', time.localtime())) == 0:
-    #         main()
-    #         i = i + 1
-    #     else:
-    #         # print(time.strftime('%d%b%H%M', time.localtime()))
-    #         time.sleep(10)

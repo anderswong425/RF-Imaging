@@ -7,6 +7,7 @@ from bokeh.models.widgets import Tabs, Panel
 from bokeh.models import Div
 
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 import numpy as np
 import os
@@ -64,7 +65,7 @@ def data_collection_once(parameters, signal, devices):
     dataset = np.zeros([len(parameters['device_indices']), len(parameters['device_indices']), parameters['num_samples']], dtype=complex)
 
     for tx in range(len(parameters['device_indices'])):
-        config_devices_gain(tx, parameters, devices)
+        # config_devices_gain(tx, parameters, devices)
         devices[tx].transmit(signal)
         receive_concurrently(devices)
         devices[tx].stop_transmit()

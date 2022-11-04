@@ -1,27 +1,14 @@
+# %%
 # Based on Amar's matlab code
+import matplotlib.pyplot as plt
+from functions import *
 import numpy as np
 from shapely.geometry import LineString, Point
 
 import time
 
-parameters = {}
 
-parameters['time'] = time.strftime('%d%b%H%M', time.localtime())
-parameters['doi_size'] = 1.5
-parameters['num_iter'] = 1,
-parameters['num_devices'] = 20
-parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
-
-parameters['sample_rate'] = 1e6  # Hz
-parameters['num_samples'] = 1000  # number of samples per call to rx()
-parameters['center_freq'] = 2.35e9  # Hz 2.4e9
-parameters['bandwidth'] = 10  # Hz
-parameters['transmitter_attenuation'] = 0  # dB
-parameters['receiver_gain'] = 40,  # dB
-parameters['grid_resolution'] = 0.05
-
-
-def calculate_distace(point1, point2):
+def calculate_distance(point1, point2):
     return np.sqrt((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)
 
 
@@ -51,24 +38,77 @@ def get_grid_coordinates(parameters):
     return xx, yy
 
 
-device_xx, device_yy = get_device_coordinates(parameters)
+def inverse_RTI_preparation(parameters):
+    device_xx, device_yy = get_device_coordinates(parameters)
+
+    grid_xx, grid_yy = get_grid_coordinates(parameters)
+
+    dist_txrx = np.zeros((parameters['num_devices'], parameters['num_devices']))
+    for tx in range(parameters['num_devices']):
+        for rx in range(parameters['num_devices']):
+            dist_txrx[tx][rx] = calculate_distance((device_xx[tx], device_yy[tx]), (device_xx[rx], device_yy[rx]))
+
+    dist_grid2device = np.zeros((int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution']), parameters['num_devices']))
+    for y in range(int(parameters['doi_size']/parameters['grid_resolution'])):
+        for x in range(int(parameters['doi_size']/parameters['grid_resolution'])):
+            for device in range(parameters['num_devices']):
+                dist_grid2device[x][y][device] = (calculate_distance((grid_xx[x][y], grid_yy[x][y]), (device_xx[device], device_yy[device])))
+
+    F_RTI = np.zeros(((parameters['num_devices'])*(parameters['num_devices']-1), int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution'])))
+
+    idx = 0
+    for tx in range(parameters['num_devices']):
+        for rx in range(parameters['num_devices']):
+            if tx != rx:
+                Thresh = 2*np.sqrt(dist_txrx[tx][rx]**2/4+parameters['detection_size']**2)
+                foc_sum = dist_grid2device[:, :, rx] + dist_grid2device[:, :, tx]
+                foc_sum[foc_sum > Thresh] = 0
+                foc_sum[foc_sum != 0] = 1
+
+                F_RTI[idx] = foc_sum
+                idx += 1
+
+    F_RTI = F_RTI.reshape((parameters['num_devices'])*(parameters['num_devices']-1), -1)
+    RTI_matrix = np.linalg.solve((np.matmul(F_RTI.T, F_RTI) + parameters['alpha'] * np.identity((int(parameters['doi_size']/parameters['grid_resolution'])**2))),  F_RTI.T)
+
+    parameters['device_coordinates'] = [device_xx, device_yy]
+    return RTI_matrix
 
 
-grid_xx, grid_yy = get_grid_coordinates(parameters)
+def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
+    #     Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
+    #     Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
 
-dist_txrx = np.zeros((parameters['num_devices'], parameters['num_devices']))
-for tx in range(parameters['num_devices']):
-    for rx in range(parameters['num_devices']):
-        dist_txrx[tx][rx] = calculate_distace((device_xx[tx], device_yy[tx]), (device_xx[rx], device_yy[rx]))
+    Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
+    Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)
 
-# print(dist_txrx)
+    Pryt = Pinc - Ptot
 
-dist_grid2device = np.zeros((int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution']), parameters['num_devices']))
+    output = np.matmul(RTI_matrix, Pryt)
 
-for idx, grid_x in enumerate(grid_xx):
-    for idy, grid_y in enumerate(grid_yy):
-        for device in range(parameters['num_devices']):
-            dist_grid2device[idx][idy][device] = calculate_distace((grid_x, grid_y), (device_xx[device], device_yy[device]))
+    output = output / output.max()
+
+    output[output < 0] = 0
+
+    output = output.reshape(30, 30).T
+    output = np.rot90(output, k=1)
+
+    return output
 
 
-print(dist_grid2device.shape)
+def output_visualization(parameters, signal, devices, Pinc, RTI_matrix):
+    def update(frame, *fargs):
+        parameters, signal, devices, Pinc, RTI_matrix = fargs
+        Ptot = data_collection_once(parameters, signal, devices)
+        output = inverse_RTI(parameters, Pinc, Ptot, RTI_matrix)
+        ln.set_data(output)
+        return [ln]
+
+    fig = plt.figure(figsize=(6, 6))
+    plt.axis('off')
+    for i in range(parameters['num_devices']):
+        plt.scatter(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], c='tan', s=200)
+    ln = plt.imshow(np.zeros((30, 30)), vmin=0, vmax=1, extent=[0.025, 1.475, 0.025, 1.475], cmap='jet')
+
+    anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, RTI_matrix,), interval=100)
+    plt.show()
