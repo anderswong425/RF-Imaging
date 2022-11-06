@@ -5,7 +5,7 @@ from functions import *
 import numpy as np
 from shapely.geometry import LineString, Point
 
-import time
+from numba import jit
 
 
 def calculate_distance(point1, point2):
@@ -75,6 +75,7 @@ def inverse_RTI_preparation(parameters):
     return RTI_matrix
 
 
+@jit(nopython=True)
 def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
     #     Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
     #     Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
@@ -96,19 +97,32 @@ def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
     return output
 
 
-def output_visualization(parameters, signal, devices, Pinc, RTI_matrix):
+def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
     def update(frame, *fargs):
-        parameters, signal, devices, Pinc, RTI_matrix = fargs
+        parameters, signal, devices, Pinc, inverse_RTI_matrix = fargs
         Ptot = data_collection_once(parameters, signal, devices)
-        output = inverse_RTI(parameters, Pinc, Ptot, RTI_matrix)
+
+        output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
         ln.set_data(output)
+
+        print(time.strftime('%H:%M:%S.%f', time.localtime()))
         return [ln]
 
-    fig = plt.figure(figsize=(6, 6))
+    fontdict = {'family': 'serif',
+                'color':  'black',
+                'weight': 'normal',
+                'size': 10,
+                }
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
     plt.axis('off')
-    for i in range(parameters['num_devices']):
-        plt.scatter(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], c='tan', s=200)
+
     ln = plt.imshow(np.zeros((30, 30)), vmin=0, vmax=1, extent=[0.025, 1.475, 0.025, 1.475], cmap='jet')
 
-    anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, RTI_matrix,), interval=100)
+    for i in range(parameters['num_devices']):
+        plt.scatter(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], c='tan', s=200)
+        plt.text(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], s=i+1, fontdict=fontdict, va='center', ha='center')
+
+    anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, inverse_RTI_matrix,), interval=100)
     plt.show()
