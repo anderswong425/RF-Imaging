@@ -1,10 +1,10 @@
 from pluto import Pluto
 
-from bokeh.io import output_file, show
-from bokeh.plotting import figure
-from bokeh.layouts import gridplot, row, column
-from bokeh.models.widgets import Tabs, Panel
-from bokeh.models import Div
+# from bokeh.io import output_file, show
+# from bokeh.plotting import figure
+# from bokeh.layouts import gridplot, row, column
+# from bokeh.models.widgets import Tabs, Panel
+# from bokeh.models import Div
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -15,7 +15,7 @@ import shutil
 from tqdm import tqdm
 import threading
 import time
-from si_prefix import si_format
+# from si_prefix import si_format
 
 
 # data collection functions

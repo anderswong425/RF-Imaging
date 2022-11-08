@@ -5,7 +5,7 @@ from functions import *
 import numpy as np
 from shapely.geometry import LineString, Point
 
-from numba import jit
+# from numba import jit
 
 
 def calculate_distance(point1, point2):
@@ -75,7 +75,7 @@ def inverse_RTI_preparation(parameters):
     return RTI_matrix
 
 
-@jit(nopython=True)
+# @jit(nopython=True)
 def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
     #     Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
     #     Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
