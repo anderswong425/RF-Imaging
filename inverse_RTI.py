@@ -5,8 +5,6 @@ from functions import *
 import numpy as np
 from shapely.geometry import LineString, Point
 
-# from numba import jit
-
 
 def calculate_distance(point1, point2):
     return np.sqrt((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)
@@ -75,12 +73,7 @@ def inverse_RTI_preparation(parameters):
     return RTI_matrix
 
 
-# @jit(nopython=True)
 def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
-    #     Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
-    #     Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
-
-    Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
     Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)
 
     Pryt = Pinc - Ptot
@@ -101,11 +94,15 @@ def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
     def update(frame, *fargs):
         parameters, signal, devices, Pinc, inverse_RTI_matrix = fargs
         Ptot = data_collection_once(parameters, signal, devices)
+        Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
 
         output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
         ln.set_data(output)
 
-        print(time.strftime('%H:%M:%S.%f', time.localtime()))
+        now = time.time()
+        print(f"{(now - parameters['time']):.2f}s")
+        parameters['time'] = now
+
         return [ln]
 
     fontdict = {'family': 'serif',

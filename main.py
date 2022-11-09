@@ -5,19 +5,21 @@ from inverse_RTI import inverse_RTI_preparation, output_visualization
 def main():
     parameters = {}
 
-    parameters['time'] = time.strftime('%d%b%H%M', time.localtime())
-    parameters['doi_size'] = 1.5
-    parameters['alpha'] = 1e2
-
+    parameters['time'] = time.time()
     parameters['num_devices'] = 20
     parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
 
+    # device parameters
     parameters['sample_rate'] = 1e6  # Hz
-    parameters['num_samples'] = 1000  # number of samples per call to rx()
+    parameters['num_samples'] = 100  # number of samples per call to rx()
     parameters['center_freq'] = 2.35e9  # Hz
     parameters['bandwidth'] = 10  # Hz
     parameters['transmitter_attenuation'] = 0  # dB
     parameters['receiver_gain'] = 30  # dB
+
+    # imaging parameters
+    parameters['doi_size'] = 1.5
+    parameters['alpha'] = 1e2
     parameters['grid_resolution'] = 0.05
     parameters['detection_size'] = 0.1
 
