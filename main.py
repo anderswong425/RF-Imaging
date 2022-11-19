@@ -18,10 +18,11 @@ def main():
     parameters['receiver_gain'] = 30  # dB
 
     # imaging parameters
-    parameters['doi_size'] = 1.5
+    parameters['doi_size'] = 1
     parameters['alpha'] = 1e2
     parameters['grid_resolution'] = 0.05
     parameters['detection_size'] = 0.1
+    parameters['pixel_size'] = (int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution'])) 
 
     signal = generate_signal()
 

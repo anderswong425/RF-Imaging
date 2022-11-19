@@ -27,9 +27,9 @@ def get_device_coordinates(parameters):
 
 
 def get_grid_coordinates(parameters):
-    x = np.linspace(0.025, 1.475, int(parameters['doi_size']/parameters['grid_resolution']))
+    x = np.linspace(0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2, parameters['pixel_size'][0])
 
-    y = np.linspace(0.025, 1.475, int(parameters['doi_size']/parameters['grid_resolution']))
+    y = np.linspace(0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2, parameters['pixel_size'][1])
 
     xx, yy = np.meshgrid(x, y)
 
@@ -46,13 +46,13 @@ def inverse_RTI_preparation(parameters):
         for rx in range(parameters['num_devices']):
             dist_txrx[tx][rx] = calculate_distance((device_xx[tx], device_yy[tx]), (device_xx[rx], device_yy[rx]))
 
-    dist_grid2device = np.zeros((int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution']), parameters['num_devices']))
-    for y in range(int(parameters['doi_size']/parameters['grid_resolution'])):
-        for x in range(int(parameters['doi_size']/parameters['grid_resolution'])):
+    dist_grid2device = np.zeros((*parameters['pixel_size'], parameters['num_devices']))
+    for y in range(parameters['pixel_size'][1]):
+        for x in range(parameters['pixel_size'][0]):
             for device in range(parameters['num_devices']):
                 dist_grid2device[x][y][device] = (calculate_distance((grid_xx[x][y], grid_yy[x][y]), (device_xx[device], device_yy[device])))
 
-    F_RTI = np.zeros(((parameters['num_devices'])*(parameters['num_devices']-1), int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution'])))
+    F_RTI = np.zeros(((parameters['num_devices'])*(parameters['num_devices']-1), *parameters['pixel_size']))
 
     idx = 0
     for tx in range(parameters['num_devices']):
@@ -67,7 +67,7 @@ def inverse_RTI_preparation(parameters):
                 idx += 1
 
     F_RTI = F_RTI.reshape((parameters['num_devices'])*(parameters['num_devices']-1), -1)
-    RTI_matrix = np.linalg.solve((np.matmul(F_RTI.T, F_RTI) + parameters['alpha'] * np.identity((int(parameters['doi_size']/parameters['grid_resolution'])**2))),  F_RTI.T)
+    RTI_matrix = np.linalg.solve((np.matmul(F_RTI.T, F_RTI) + parameters['alpha'] * np.identity((parameters['pixel_size'][0]**2))),  F_RTI.T)
 
     parameters['device_coordinates'] = [device_xx, device_yy]
     return RTI_matrix
@@ -84,7 +84,7 @@ def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
 
     output[output < 0] = 0
 
-    output = output.reshape(30, 30).T
+    output = output.reshape(parameters['pixel_size']).T
     output = np.rot90(output, k=1)
 
     return output
@@ -115,7 +115,7 @@ def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
     plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
     plt.axis('off')
 
-    ln = plt.imshow(np.zeros((30, 30)), vmin=0, vmax=1, extent=[0.025, 1.475, 0.025, 1.475], cmap='jet')
+    ln = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2, 0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2], cmap='jet')
 
     for i in range(parameters['num_devices']):
         plt.scatter(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], c='tan', s=200)
