@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from functions import *
 import numpy as np
 from shapely.geometry import LineString, Point
+from multiprocessing import Process, Queue
+
 
 
 def calculate_distance(point1, point2):
@@ -70,37 +72,42 @@ def inverse_RTI_preparation(parameters):
     RTI_matrix = np.linalg.solve((np.matmul(F_RTI.T, F_RTI) + parameters['alpha'] * np.identity((parameters['pixel_size'][0]**2))),  F_RTI.T)
 
     parameters['device_coordinates'] = [device_xx, device_yy]
-    return RTI_matrix
+    return RTI_matrix.astype('float32')
 
 
 def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
-    Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)
-
+    Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1) #drop tx=rx data
     Pryt = Pinc - Ptot
+    
+    Pryt = Pryt.astype('float32')
+    # print(RTI_matrix.dtype)
+    # print(Pryt.dtype)
+
 
     output = np.matmul(RTI_matrix, Pryt)
 
-    output = output / output.max()
-
+    output /= output.max()
+    
     output[output < 0] = 0
-
-    output = output.reshape(parameters['pixel_size']).T
-    output = np.rot90(output, k=1)
-
+    
+    # print(f'{Pryt.dtype=}')
     return output
 
 
-def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
+def image_display(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
     def update(frame, *fargs):
         parameters, signal, devices, Pinc, inverse_RTI_matrix = fargs
-        Ptot = data_collection_once(parameters, signal, devices)
-        Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
+        # Ptot = data_collection_once(parameters, signal, devices)
+        # Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
 
-        output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
+        # output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
+        output = q.get()
+        output = output.reshape(parameters['pixel_size']).T
+        output = np.rot90(output, k=1)
         ln.set_data(output)
 
         now = time.time()
-        print(f"{(now - parameters['time']):.2f}s")
+        print(f"{(now - parameters['time']):.4f}s")
         parameters['time'] = now
 
         return [ln]
@@ -123,3 +130,25 @@ def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
 
     anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, inverse_RTI_matrix,), interval=100)
     plt.show()
+
+def data_processing(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
+    while True:
+        Ptot = data_collection_once(parameters, signal, devices)
+        Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
+
+        output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
+        
+        q.put(output)
+        
+def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
+    q = Queue()
+
+    p = Process(target=data_processing, args=(q, parameters, signal, devices, Pinc, inverse_RTI_matrix,))
+    p2 = Process(target=image_display, args=(q,parameters, signal, devices, Pinc, inverse_RTI_matrix,))
+    p.start()
+    p2.start()
+    
+    p.join()
+    p2.join()
+    
+    

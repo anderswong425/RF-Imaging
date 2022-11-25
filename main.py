@@ -36,7 +36,7 @@ def main():
     inverse_RTI_matrix = inverse_RTI_preparation(parameters)
 
     output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix)
-
+    # haha(parameters, signal, devices, Pinc, inverse_RTI_matrix)
 
 if __name__ == '__main__':
     main()
