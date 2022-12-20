@@ -15,15 +15,19 @@ def main():
     parameters['center_freq'] = 2.35e9  # Hz
     parameters['bandwidth'] = 10  # Hz
     parameters['transmitter_attenuation'] = 0  # dB
-    parameters['receiver_gain'] = 30  # dB
+    parameters['receiver_gain'] = 40  # dB
+    parameters['wavelength'] = 3e8/parameters['center_freq']
 
     # imaging parameters
-    parameters['doi_size'] = 1
-    parameters['alpha'] = 1e2
-    parameters['grid_resolution'] = 0.05
+    parameters['doi_size'] = 3
+    parameters['alpha'] = 1e2 #1e2
+    parameters['grid_resolution'] = 0.1
     parameters['detection_size'] = 0.1
     parameters['pixel_size'] = (int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution'])) 
 
+    parameters['eterm'] = 1
+    
+    
     signal = generate_signal()
 
     devices = init_devices(parameters)
