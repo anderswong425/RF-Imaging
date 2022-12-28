@@ -16,8 +16,7 @@ def main():
     parameters['bandwidth'] = 10  # Hz
     parameters['transmitter_attenuation'] = 0  # dB
     parameters['receiver_gain'] = 40  # dB
-    parameters['wavelength'] = 3e8/parameters['center_freq']
-
+            
     # imaging parameters
     parameters['doi_size'] = 3
     parameters['alpha'] = 1e2 #1e2

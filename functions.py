@@ -31,10 +31,18 @@ def generate_signal():
 
 def init_devices(parameters):
     devices = []
+    flag = False
     for i in parameters['device_indices']:
-        devices.append(Pluto(i, parameters))
+        try:
+            devices.append(Pluto(i, parameters))
+        except:
+            print(f'Pluto{i} not found!')
+            flag = True
 
-    return devices
+    if flag:
+        quit()
+    else:
+        return devices
 
 
 def receive_concurrently(devices):
