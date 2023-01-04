@@ -7,7 +7,6 @@ from shapely.geometry import LineString, Point
 from multiprocessing import Process, Queue
 
 
-
 def calculate_distance(point1, point2):
     return np.sqrt((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)
 
@@ -76,21 +75,17 @@ def inverse_RTI_preparation(parameters):
 
 
 def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
-    Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1) #drop tx=rx data
+    Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)  # drop tx=rx data
     Pryt = Pinc - Ptot
-    
-    Pryt = Pryt.astype('float32')
-    # print(RTI_matrix.dtype)
-    # print(Pryt.dtype)
 
+    Pryt = Pryt.astype('float32')
 
     output = np.matmul(RTI_matrix, Pryt)
 
     output /= output.max()
-    
+
     output[output < 0] = 0
-    
-    # print(f'{Pryt.dtype=}')
+
     return output
 
 
@@ -122,7 +117,8 @@ def image_display(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
     plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
     plt.axis('off')
 
-    ln = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2, 0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2], cmap='jet')
+    ln = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[0+parameters['grid_resolution']/2, parameters['doi_size'] -
+                    parameters['grid_resolution']/2, 0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2], cmap='jet')
 
     for i in range(parameters['num_devices']):
         plt.scatter(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], c='tan', s=200)
@@ -131,24 +127,33 @@ def image_display(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
     anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, inverse_RTI_matrix,), interval=100)
     plt.show()
 
+
 def data_processing(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
     while True:
         Ptot = data_collection_once(parameters, signal, devices)
         Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
 
         output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
-        
+
         q.put(output)
-        
+
+
 def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
     q = Queue()
 
     p = Process(target=data_processing, args=(q, parameters, signal, devices, Pinc, inverse_RTI_matrix,))
-    p2 = Process(target=image_display, args=(q,parameters, signal, devices, Pinc, inverse_RTI_matrix,))
+    p2 = Process(target=image_display, args=(q, parameters, signal, devices, Pinc, inverse_RTI_matrix,))
     p.start()
     p2.start()
-    
+
     p.join()
     p2.join()
-    
-    
+
+
+def inverse_RTI_algo(parameters, signal, devices):
+    Pinc = np.mean([data_collection_once(parameters, signal, devices) for _ in range(5)], axis=0)
+    Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
+    Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
+
+    inverse_RTI_matrix = inverse_RTI_preparation(parameters)
+    output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix)
