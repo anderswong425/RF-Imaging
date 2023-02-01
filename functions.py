@@ -111,6 +111,10 @@ def data_collection(parameters, signal, devices):
 # data processing functions
 
 
+def calculate_distance(point1, point2):
+    return np.sqrt((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)
+
+
 def create_result_folder(dir):
     if os.path.exists(dir):
         #     shutil.rmtree(dir)

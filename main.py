@@ -12,7 +12,7 @@ def main():
     # device parameters
     parameters['sample_rate'] = 1e6  # Hz
     parameters['num_samples'] = 100  # number of samples per call to rx()
-    parameters['center_freq'] = 2.35e9  # Hz
+    parameters['center_freq'] = 2.4e9  # Hz
     parameters['bandwidth'] = 10  # Hz
     parameters['transmitter_attenuation'] = 0  # dB
     parameters['receiver_gain'] = 40  # dB

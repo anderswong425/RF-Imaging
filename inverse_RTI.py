@@ -11,7 +11,7 @@ def calculate_distance(point1, point2):
     return np.sqrt((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)
 
 
-def get_device_coordinates(parameters):
+def RTI_get_device_coordinates(parameters):
     doi_size = parameters['doi_size']
     num_deivces = len(parameters['device_indices'])
 
@@ -27,7 +27,7 @@ def get_device_coordinates(parameters):
     return xx, yy
 
 
-def get_grid_coordinates(parameters):
+def RTI_get_grid_coordinates(parameters):
     x = np.linspace(0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2, parameters['pixel_size'][0])
 
     y = np.linspace(0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2, parameters['pixel_size'][1])
@@ -38,9 +38,9 @@ def get_grid_coordinates(parameters):
 
 
 def inverse_RTI_preparation(parameters):
-    device_xx, device_yy = get_device_coordinates(parameters)
+    device_xx, device_yy = RTI_get_device_coordinates(parameters)
 
-    grid_xx, grid_yy = get_grid_coordinates(parameters)
+    grid_xx, grid_yy = RTI_get_grid_coordinates(parameters)
 
     dist_txrx = np.zeros((parameters['num_devices'], parameters['num_devices']))
     for tx in range(parameters['num_devices']):
@@ -74,7 +74,7 @@ def inverse_RTI_preparation(parameters):
     return RTI_matrix.astype('float32')
 
 
-def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix, plot=True):
+def inverse_RTI(parameters, Pinc, Ptot, RTI_matrix):
     Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)  # drop tx=rx data
     Pryt = Pinc - Ptot
 
@@ -97,8 +97,8 @@ def image_display(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
 
         # output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
         output = q.get()
-        output = output.reshape(parameters['pixel_size']).T
-        output = np.rot90(output, k=1)
+        output = output.reshape(parameters['pixel_size'])
+        # output = np.rot90(output, k=2)
         ln.set_data(output)
 
         now = time.time()
