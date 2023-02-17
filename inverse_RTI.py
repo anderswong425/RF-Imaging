@@ -98,7 +98,6 @@ def image_display(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
         # output = inverse_RTI(parameters, Pinc, Ptot, inverse_RTI_matrix)
         output = q.get()
         output = output.reshape(parameters['pixel_size'])
-        # output = np.rot90(output, k=2)
         ln.set_data(output)
 
         now = time.time()
@@ -141,12 +140,12 @@ def data_processing(q, parameters, signal, devices, Pinc, inverse_RTI_matrix):
 def output_visualization(parameters, signal, devices, Pinc, inverse_RTI_matrix):
     q = Queue()
 
-    p = Process(target=data_processing, args=(q, parameters, signal, devices, Pinc, inverse_RTI_matrix,))
+    p1 = Process(target=data_processing, args=(q, parameters, signal, devices, Pinc, inverse_RTI_matrix,))
     p2 = Process(target=image_display, args=(q, parameters, signal, devices, Pinc, inverse_RTI_matrix,))
-    p.start()
+    p1.start()
     p2.start()
 
-    p.join()
+    p1.join()
     p2.join()
 
 

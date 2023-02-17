@@ -69,12 +69,14 @@ def xPRA_preparation(parameters):
     return FrytB
 
 
-def xPRA(parameters, Pinc, Ptot):
-    FrytB = xPRA_preparation(parameters)
+def xPRA(parameters, xPRA_preparation_matrix, Pinc, Ptot):
+    FrytB = xPRA_preparation_matrix
     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
 
-    lambda_max = np.linalg.norm(np.matmul(FrytB.T, Pryt), ord=2)
-    Oimag = np.matmul(np.linalg.solve((np.matmul(FrytB.T, FrytB) + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1])),  FrytB.T), Pryt)[parameters['pixel_size'][0]**2:]
+    lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
+
+    Oimag = (np.linalg.solve((FrytB.T @ FrytB) + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T) @ Pryt)[parameters['pixel_size'][0]**2:]
+
     epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
 
     epr[epr < 0] = 0

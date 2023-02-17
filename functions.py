@@ -16,6 +16,7 @@ from tqdm import tqdm
 import threading
 import time
 # from si_prefix import si_format
+from multiprocessing import Process, Queue
 
 
 # data collection functions
@@ -425,3 +426,68 @@ def generate_gain_table(parameters, devices, signal):
         tx.stop_transmit()
 
     return gain_table
+
+
+def real_time_visualization(parameters, signal, devices, preparation_func, processing_func):
+
+    def data_processing(q, parameters, signal, devices, Pinc, preparation_matrix):
+        while True:
+            Ptot = data_collection_once(parameters, signal, devices)
+            Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
+            Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)
+
+            start = time.monotonic()
+            output = processing_func(parameters, preparation_matrix, Pinc, Ptot)
+            end = time.monotonic()
+            print('\nprocessing time: ', end-start)
+
+            q.put(output)
+
+    def image_display(q, parameters, signal, devices, Pinc, preparation_matrix):
+        def update(frame, *fargs):
+            parameters, signal, devices, Pinc, preparation_matrix = fargs
+            output = q.get()
+            output = output.reshape(parameters['pixel_size'])
+            ln.set_data(output)
+
+            now = time.monotonic()
+            print(f"{(now - parameters['time']):.4f}s")
+            parameters['time'] = now
+
+            return [ln]
+
+        fontdict = {'family': 'serif',
+                    'color':  'black',
+                    'weight': 'normal',
+                    'size': 10,
+                    }
+
+        fig = plt.figure(figsize=(8, 8))
+        plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+        plt.axis('off')
+
+        ln = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[0+parameters['grid_resolution']/2, parameters['doi_size'] -
+                        parameters['grid_resolution']/2, 0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2], cmap='jet')
+
+        # for i in range(parameters['num_devices']):
+        #     plt.scatter(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], c='tan', s=200)
+        #     plt.text(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], s=i+1, fontdict=fontdict, va='center', ha='center')
+
+        anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, preparation_matrix,), interval=100)
+        plt.show()
+
+    Pinc = np.mean([data_collection_once(parameters, signal, devices) for _ in range(5)], axis=0)
+    Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
+    Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
+
+    preparation_matrix = preparation_func(parameters)
+
+    q = Queue()
+
+    p1 = Process(target=data_processing, args=(q, parameters, signal, devices, Pinc, preparation_matrix,))
+    p2 = Process(target=image_display, args=(q, parameters, signal, devices, Pinc, preparation_matrix,))
+    p1.start()
+    p2.start()
+
+    p1.join()
+    p2.join()
