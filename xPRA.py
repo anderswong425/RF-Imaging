@@ -1,3 +1,4 @@
+from numba import njit
 from functions import *
 from shapely.geometry import LineString, Point
 from scipy.special import hankel1, jv
@@ -7,7 +8,6 @@ def get_device_coordinates(parameters):
     doi_size = parameters['doi_size']
     num_deivces = len(parameters['device_indices'])
 
-    # line = LineString(((0.0, 0.0), (0.0, doi_size), (doi_size, doi_size), (doi_size, 0.0), (0.0, 0.0)))
     line = LineString(((-doi_size/2, -doi_size/2), (doi_size/2, -doi_size/2), (doi_size/2, doi_size/2), (-doi_size/2, doi_size/2), (-doi_size/2, -doi_size/2)))
 
     distances = np.linspace(0, line.length, num_deivces+1)
@@ -16,11 +16,13 @@ def get_device_coordinates(parameters):
 
     coordinates = [[round(point.x, 2), round(point.y, 2)] for point in points]
 
+    parameters['device_coordinates'] = coordinates
+
     return np.array(coordinates)
 
 
 def get_grid_coordinates(parameters):
-    start = -parameters['doi_size']/2 + parameters['grid_resolution']/2
+    start = -parameters['doi_size']/2 + parameters['doi_size']/(2*parameters['pixel_size'][0])
     end = abs(start)
 
     x = np.linspace(start, end, parameters['pixel_size'][0])
@@ -66,16 +68,18 @@ def xPRA_preparation(parameters):
 
     FrytB = np.concatenate((Fryt.real, -Fryt.imag), axis=1)
 
-    return FrytB
+    FrytBat = FrytB.T @ FrytB
+
+    return FrytB, FrytBat
 
 
-def xPRA(parameters, xPRA_preparation_matrix, Pinc, Ptot):
-    FrytB = xPRA_preparation_matrix
+def xPRA(parameters, FrytB, FrytBat, Pinc, Ptot):
+
     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
 
     lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
 
-    Oimag = (np.linalg.solve((FrytB.T @ FrytB) + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T) @ Pryt)[parameters['pixel_size'][0]**2:]
+    Oimag = (np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T) @ Pryt)[parameters['pixel_size'][0]**2:]
 
     epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
 

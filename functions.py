@@ -1,3 +1,4 @@
+from skimage.restoration import denoise_tv_chambolle
 from pluto import Pluto
 
 # from bokeh.io import output_file, show
@@ -432,14 +433,21 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
 
     def data_processing(q, parameters, signal, devices, Pinc, preparation_matrix):
         while True:
+            start = time.monotonic()
             Ptot = data_collection_once(parameters, signal, devices)
+            print("Data collection:".rjust(20), f"{(time.monotonic()-start):.2f}", 's')
+
             Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
             Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)
 
             start = time.monotonic()
-            output = processing_func(parameters, preparation_matrix, Pinc, Ptot)
-            end = time.monotonic()
-            print('\nprocessing time: ', end-start)
+            output = processing_func(parameters, preparation_matrix, preparation_matrix2, Pinc, Ptot)
+            print('XPRA:'.rjust(20), f"{(time.monotonic()-start):.2f}", 's')
+
+            start = time.monotonic()
+            output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
+            print('Denoising:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
+            # output = output/np.max(output)
 
             q.put(output)
 
@@ -448,13 +456,15 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
             parameters, signal, devices, Pinc, preparation_matrix = fargs
             output = q.get()
             output = output.reshape(parameters['pixel_size'])
-            ln.set_data(output)
+            im.set_data(output)
+            im.set_clim(vmin=np.min(im.get_array()), vmax=np.max(im.get_array()))
 
+            print('-'*29)
             now = time.monotonic()
-            print(f"{(now - parameters['time']):.4f}s")
+            print('Frame acquisition:'.rjust(20), f"{(now - parameters['time']):.2f}", 's\n')
             parameters['time'] = now
 
-            return [ln]
+            return [im]
 
         fontdict = {'family': 'serif',
                     'color':  'black',
@@ -462,16 +472,19 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
                     'size': 10,
                     }
 
-        fig = plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=(8, 7))
+
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
         plt.axis('off')
 
-        ln = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[0+parameters['grid_resolution']/2, parameters['doi_size'] -
-                        parameters['grid_resolution']/2, 0+parameters['grid_resolution']/2, parameters['doi_size']-parameters['grid_resolution']/2], cmap='jet')
+        im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[-parameters['doi_size']/2,
+                        parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2], cmap='jet')
+        fig.colorbar(im, fraction=0.046, pad=0.04)
+        plt.tight_layout()
 
-        # for i in range(parameters['num_devices']):
-        #     plt.scatter(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], c='tan', s=200)
-        #     plt.text(parameters['device_coordinates'][0][i], parameters['device_coordinates'][1][i], s=i+1, fontdict=fontdict, va='center', ha='center')
+        for i in range(parameters['num_devices']):
+            plt.scatter(*parameters['device_coordinates'][i], c='tan', s=200)
+            plt.text(*parameters['device_coordinates'][i], s=i+1, fontdict=fontdict, va='center', ha='center')
 
         anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, preparation_matrix,), interval=100)
         plt.show()
@@ -480,7 +493,11 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
     Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
     Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
 
-    preparation_matrix = preparation_func(parameters)
+    # for testing using saved Pinc
+    # np.save('Pinc.npy', Pinc)
+    Pinc = np.load('Pinc.npy')
+
+    preparation_matrix, preparation_matrix2 = preparation_func(parameters)
 
     q = Queue()
 

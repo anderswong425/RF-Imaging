@@ -21,16 +21,14 @@ def main():
 
     # imaging parameters
     parameters['doi_size'] = 3
-    parameters['alpha'] = 0.5  # 1e2
-    parameters['grid_resolution'] = 0.05
     parameters['detection_size'] = 0.1
-    parameters['pixel_size'] = (int(parameters['doi_size']/parameters['grid_resolution']), int(parameters['doi_size']/parameters['grid_resolution']))
 
-    parameters['eterm'] = 1
-    parameters['k0'] = 2*np.pi/parameters['wavelength']
+    parameters['alpha'] = 3  # 1e2
+    parameters['denoising_weight'] = 0.2
+    parameters['pixel_size'] = (60, 60)
 
-    parameters['cellrad'] = (np.sqrt(parameters['grid_resolution']**2/np.pi)*2)/2
     parameters['k0'] = 2*np.pi/parameters['wavelength']
+    parameters['cellrad'] = parameters['doi_size']/(parameters['pixel_size'][0]*np.sqrt(np.pi))
 
     signal = generate_signal()
 
