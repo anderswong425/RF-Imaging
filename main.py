@@ -14,7 +14,7 @@ def main():
     parameters['sample_rate'] = 1e6  # Hz
     parameters['num_samples'] = 100  # number of samples per call to rx()
     parameters['center_freq'] = 2.4e9  # Hz
-    parameters['bandwidth'] = 10  # Hz
+    parameters['bandwidth'] = 100  # Hz
     parameters['transmitter_attenuation'] = 0  # dB
     parameters['receiver_gain'] = 30  # dB
     parameters['wavelength'] = 3e8/parameters['center_freq']
@@ -24,8 +24,8 @@ def main():
     parameters['detection_size'] = 0.1
 
     parameters['alpha'] = 3  # 1e2
-    parameters['denoising_weight'] = 0.2
-    parameters['pixel_size'] = (60, 60)
+    parameters['denoising_weight'] = 0.1
+    parameters['pixel_size'] = (60, ) * 2  # NxN square matrix
 
     parameters['k0'] = 2*np.pi/parameters['wavelength']
     parameters['cellrad'] = parameters['doi_size']/(parameters['pixel_size'][0]*np.sqrt(np.pi))

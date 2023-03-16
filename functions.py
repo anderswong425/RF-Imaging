@@ -472,14 +472,14 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
                     'size': 10,
                     }
 
-        fig = plt.figure(figsize=(8, 7))
+        fig = plt.figure(figsize=(7, 6))
 
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
         plt.axis('off')
 
         im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[-parameters['doi_size']/2,
                         parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2], cmap='jet')
-        fig.colorbar(im, fraction=0.046, pad=0.04)
+        fig.colorbar(im, fraction=0.1, pad=0.1)
         plt.tight_layout()
 
         for i in range(parameters['num_devices']):

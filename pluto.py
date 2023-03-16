@@ -39,7 +39,7 @@ class Pluto:
         self.sdr.tx_destroy_buffer()
 
     def receive(self):
-        for _ in range(5):  # clear buffer
+        for _ in range(3):  # clear buffer
             self.sdr.rx()
         self.data = self.sdr.rx()
 
