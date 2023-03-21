@@ -66,19 +66,39 @@ def xPRA_preparation(parameters):
 
                 idx += 1
 
-    FrytB = -Fryt.imag
+    FrytB = np.concatenate((Fryt.real, -Fryt.imag), axis=1)
+    # FrytB = -Fryt.imag
 
     FrytBat = FrytB.T @ FrytB
 
     return FrytB, FrytBat
 
 
+# def xPRA(parameters, FrytB, FrytBat, Pinc, Ptot):
+#     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
+
+#     lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
+
+#     Oimag = np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T) @ Pryt
+
+#     epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
+
+#     epr[epr < 0] = 0
+
+#     epr = epr.reshape(parameters['pixel_size'], order='F')
+
+#     return epr
+
+
 def xPRA(parameters, FrytB, FrytBat, Pinc, Ptot):
     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
+    if not parameters['flag']:
+        lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
+        parameters['G'] = np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T)
 
-    lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
-
-    Oimag = np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T) @ Pryt
+        parameters['flag'] = True
+    Oimag = (parameters['G'] @ Pryt)[parameters['pixel_size'][0]**2:]
+    # Oimag = (parameters['G'] @ Pryt)
 
     epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
 

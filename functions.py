@@ -20,7 +20,19 @@ import time
 from multiprocessing import Process, Queue
 
 
+def timing_decorator(func):
+    def timeit_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        total_time = end_time - start_time
+        print(f'Function {func.__name__}() took {total_time:.4f} seconds')
+        return result
+    return timeit_wrapper
+
 # data collection functions
+
+
 def generate_signal():
     x_int = np.zeros(1000)
     x_degrees = x_int*360/4.0 + 45  # 45, 135, 225, 315 degrees
@@ -442,12 +454,11 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
 
             start = time.monotonic()
             output = processing_func(parameters, preparation_matrix, preparation_matrix2, Pinc, Ptot)
-            print('XPRA:'.rjust(20), f"{(time.monotonic()-start):.2f}", 's')
+            print('XPRA:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
 
             start = time.monotonic()
             output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
             print('Denoising:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
-            # output = output/np.max(output)
 
             q.put(output)
 
@@ -455,7 +466,7 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
         def update(frame, *fargs):
             parameters, signal, devices, Pinc, preparation_matrix = fargs
             output = q.get()
-            output = output.reshape(parameters['pixel_size'])
+            # output = output.reshape(parameters['pixel_size'])
             im.set_data(output)
             im.set_clim(vmin=np.min(im.get_array()), vmax=np.max(im.get_array()))
 
@@ -466,22 +477,19 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
 
             return [im]
 
-        fontdict = {'family': 'serif',
-                    'color':  'black',
-                    'weight': 'normal',
-                    'size': 10,
-                    }
+        fontdict = {'family': 'serif', 'color':  'black', 'weight': 'normal', 'size': 10}
+        extent = [-parameters['doi_size']/2, parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2]
 
         fig = plt.figure(figsize=(7, 6))
 
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
         plt.axis('off')
 
-        im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=[-parameters['doi_size']/2,
-                        parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2], cmap='jet')
+        im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=extent, cmap='jet')
         fig.colorbar(im, fraction=0.1, pad=0.1)
         plt.tight_layout()
 
+        # add devices display on the plot
         for i in range(parameters['num_devices']):
             plt.scatter(*parameters['device_coordinates'][i], c='tan', s=200)
             plt.text(*parameters['device_coordinates'][i], s=i+1, fontdict=fontdict, va='center', ha='center')
@@ -496,6 +504,7 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
     # for testing using saved Pinc
     # np.save('Pinc.npy', Pinc)
     Pinc = np.load('Pinc.npy')
+    parameters['flag'] = 0
 
     preparation_matrix, preparation_matrix2 = preparation_func(parameters)
 

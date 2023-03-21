@@ -9,9 +9,10 @@ def main():
 
     parameters['num_devices'] = 20
     parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
+    # parameters['device_indices'] = [17, 18]
 
     # device parameters
-    parameters['sample_rate'] = 1e6  # Hz
+    parameters['sample_rate'] = 10e6  # Hz
     parameters['num_samples'] = 100  # number of samples per call to rx()
     parameters['center_freq'] = 2.4e9  # Hz
     parameters['bandwidth'] = 100  # Hz

@@ -27,9 +27,6 @@ def timing_decorator(num_runs):
     return decorator
 
 
-num_runs = 100
-
-
 def xPRA_preparation(parameters):
     device_coordinates = get_device_coordinates(parameters)
 
@@ -144,6 +141,22 @@ def xPRA_test(parameters, FrytB, FrytBat, Pinc, Ptot):
     return epr
 
 
+@timing_decorator(num_runs)
+def xPRA_test2(parameters, FrytB, FrytBat, Pinc, Ptot, G):
+    Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
+
+    Oimag = G @ Pryt
+
+    epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
+
+    epr[epr < 0] = 0
+
+    epr = epr.reshape(parameters['pixel_size'], order='F')
+    print('haha')
+
+    return epr
+
+
 parameters = {}
 parameters['time'] = time.monotonic()
 
@@ -185,16 +198,21 @@ Ptot = magnitude_to_db(abs(np.mean(np.squeeze(Ptot), axis=2)), parameters['recei
 Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)
 
 
-A = xPRA(parameters, FrytB, Pinc, Ptot)
+# A = xPRA(parameters, FrytB, Pinc, Ptot)
 
 FrytB, FrytBat = xPRA_preparation_test(parameters)
 
 B = xPRA_test(parameters, FrytB, FrytBat, Pinc, Ptot)
+Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
+lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
+G = np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T)
+C = xPRA_test2(parameters, FrytB, FrytBat, Pinc, Ptot, G)
 
-MSE = np.mean((A - B)**2)
+
+MSE = np.mean((B - C)**2)
 print(f'{MSE=:.4f}')
 plt.subplot(1, 2, 1)
-plt.imshow(A, cmap='jet')
+plt.imshow(B, cmap='jet')
 plt.title('Original')
 
 plt.subplot(1, 2, 2)
