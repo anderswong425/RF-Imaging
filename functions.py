@@ -444,6 +444,7 @@ def generate_gain_table(parameters, devices, signal):
 def real_time_visualization(parameters, signal, devices, preparation_func, processing_func):
 
     def data_processing(q, parameters, signal, devices, Pinc, preparation_matrix):
+        i = 0
         while True:
             start = time.monotonic()
             Ptot = data_collection_once(parameters, signal, devices)
@@ -459,16 +460,19 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
             start = time.monotonic()
             output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
             print('Denoising:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
-
+            i += 1
+            if i == 5:
+                Pinc = Ptot
+                i = 0
             q.put(output)
 
     def image_display(q, parameters, signal, devices, Pinc, preparation_matrix):
         def update(frame, *fargs):
             parameters, signal, devices, Pinc, preparation_matrix = fargs
             output = q.get()
-            # output = output.reshape(parameters['pixel_size'])
             im.set_data(output)
             im.set_clim(vmin=np.min(im.get_array()), vmax=np.max(im.get_array()))
+            im.set_clim(vmin=0, vmax=0.05)
 
             print('-'*29)
             now = time.monotonic()
@@ -477,22 +481,23 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
 
             return [im]
 
-        fontdict = {'family': 'serif', 'color':  'black', 'weight': 'normal', 'size': 10}
-        extent = [-parameters['doi_size']/2, parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2]
-
-        fig = plt.figure(figsize=(7, 6))
+        fig, ax = plt.subplots(figsize=(8, 7))
 
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
         plt.axis('off')
 
-        im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, extent=extent, cmap='jet')
+        im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, cmap='jet',
+                        extent=[-parameters['doi_size']/2, parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2]
+                        )
+
         fig.colorbar(im, fraction=0.1, pad=0.1)
         plt.tight_layout()
 
         # add devices display on the plot
         for i in range(parameters['num_devices']):
-            plt.scatter(*parameters['device_coordinates'][i], c='tan', s=200)
-            plt.text(*parameters['device_coordinates'][i], s=i+1, fontdict=fontdict, va='center', ha='center')
+            plt.text(*parameters['device_coordinates'][i], s=i+1, va='center', ha='center',
+                     fontdict={'family': 'serif', 'color':  'white', 'weight': 'normal', 'size': 10},
+                     bbox=dict(facecolor='black', edgecolor='none'))
 
         anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, preparation_matrix,), interval=100)
         plt.show()

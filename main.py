@@ -25,7 +25,7 @@ def main():
     parameters['detection_size'] = 0.1
 
     parameters['alpha'] = 3  # 1e2
-    parameters['denoising_weight'] = 0.1
+    parameters['denoising_weight'] = 1
     parameters['pixel_size'] = (60, ) * 2  # NxN square matrix
 
     parameters['k0'] = 2*np.pi/parameters['wavelength']

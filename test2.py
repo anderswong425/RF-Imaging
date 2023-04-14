@@ -1,20 +1,19 @@
-import numpy as np
+
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+import numpy as np
 
-fig, axs = plt.subplots(1, 2)
+# create heatmap plot
+data = np.random.rand(10, 10)
+fig, ax = plt.subplots()
+im = ax.imshow(data)
 
+# add circle outside plot
+circle = plt.Circle((12, 12), 3, color='r')
+ax.add_artist(circle)
 
-def update(frame):
-    x = np.linspace(0, 2 * np.pi, 100)
-    y1 = np.sin(x + frame)
-    y2 = np.cos(x + frame)
-    axs[0].clear()
-    axs[1].clear()
-    axs[0].plot(x, y1)
-    axs[1].plot(x, y2)
+# adjust plot limits to show circle
+ax.set_xlim([-2, 14])
+ax.set_ylim([-2, 14])
 
-
-ani = FuncAnimation(fig, update, frames=np.linspace(0, 2 * np.pi, 50), interval=50)
-
+# show plot
 plt.show()
