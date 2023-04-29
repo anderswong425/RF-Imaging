@@ -10,6 +10,8 @@ import scipy
 from shapely.geometry import LineString, Point
 from scipy.special import hankel1, jv
 
+num_runs = 10
+
 
 def timing_decorator(num_runs):
     def decorator(func):

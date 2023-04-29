@@ -1,6 +1,6 @@
 from functions import *
 from inverse_RTI import inverse_RTI_algo
-from xPRA import xPRA_preparation, xPRA
+from xPRA import xPRA_preparation, xPRA_test
 
 
 def main():
@@ -9,7 +9,6 @@ def main():
 
     parameters['num_devices'] = 20
     parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
-    # parameters['device_indices'] = [17, 18]
 
     # device parameters
     parameters['sample_rate'] = 10e6  # Hz
@@ -21,11 +20,11 @@ def main():
     parameters['wavelength'] = 3e8/parameters['center_freq']
 
     # imaging parameters
-    parameters['doi_size'] = 3
-    parameters['detection_size'] = 0.1
+    parameters['doi_size'] = 3  # m
+    parameters['detection_size'] = 0.1  # m
 
-    parameters['alpha'] = 3  # 1e2
-    parameters['denoising_weight'] = 1
+    parameters['alpha'] = 50  # 1e2
+    parameters['denoising_weight'] = 0.1
     parameters['pixel_size'] = (60, ) * 2  # NxN square matrix
 
     parameters['k0'] = 2*np.pi/parameters['wavelength']
@@ -36,7 +35,7 @@ def main():
     devices = init_devices(parameters)
 
     # inverse_RTI_algo(parameters, signal, devices)
-    real_time_visualization(parameters, signal, devices, xPRA_preparation, xPRA)
+    real_time_visualization(parameters, signal, devices, xPRA_preparation, xPRA_test)
 
 
 if __name__ == '__main__':

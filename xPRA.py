@@ -67,38 +67,24 @@ def xPRA_preparation(parameters):
                 idx += 1
 
     FrytB = np.concatenate((Fryt.real, -Fryt.imag), axis=1)
-    # FrytB = -Fryt.imag
+
+    FrytB = Fryt
 
     FrytBat = FrytB.T @ FrytB
 
     return FrytB, FrytBat
 
 
-# def xPRA(parameters, FrytB, FrytBat, Pinc, Ptot):
-#     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
-
-#     lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
-
-#     Oimag = np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T) @ Pryt
-
-#     epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
-
-#     epr[epr < 0] = 0
-
-#     epr = epr.reshape(parameters['pixel_size'], order='F')
-
-#     return epr
-
-
 def xPRA(parameters, FrytB, FrytBat, Pinc, Ptot):
+
     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
+
     if not parameters['flag']:
         lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
         parameters['G'] = np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T)
 
         parameters['flag'] = True
     Oimag = (parameters['G'] @ Pryt)[parameters['pixel_size'][0]**2:]
-    # Oimag = (parameters['G'] @ Pryt)
 
     epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
 
@@ -107,3 +93,50 @@ def xPRA(parameters, FrytB, FrytBat, Pinc, Ptot):
     epr = epr.reshape(parameters['pixel_size'], order='F')
 
     return epr
+
+
+def xPRA_test(parameters, FrytB, FrytBat, Pinc, Ptot):
+    def quadratic_smoothing(parameters, Pryt, FrytB):
+        def difference_operator(m, num_grids, direction):
+            d_row = np.zeros((1, num_grids))
+            d_row[0, 0] = 1
+
+            if direction == "horizontal":
+                d_row[0, 1] = -2
+                d_row[0, 2] = 1
+
+            elif direction == "vertical":
+                d_row[0, m] = -2
+                d_row[0, 2 * m] = 1
+
+            else:
+                raise ValueError("Invalid direction value for difference operator")
+
+            rows = list()
+            rows.append(d_row)
+            for i in range(0, num_grids - 1):
+                shifted_row = np.roll(d_row, 1)
+                shifted_row[0, 0] = 0
+                rows.append(shifted_row)
+                d_row = shifted_row
+
+            d = np.vstack([row for row in rows])
+            return d
+
+        m = parameters['pixel_size'][0]
+        dim = m**2
+
+        Dx = difference_operator(m, dim, 'horizontal')
+        Dy = difference_operator(m, dim, 'vertical')
+
+        return np.linalg.inv((FrytB.T @ FrytB) + parameters['alpha'] * (Dx.T @ Dx + Dy.T @ Dy)) @ FrytB.T
+
+    Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
+
+    if not parameters['flag']:
+        parameters['G'] = quadratic_smoothing(parameters, Pryt, FrytB)
+        parameters['flag'] = True
+
+    chi = (parameters['G'] @ Pryt).imag
+
+    return chi.reshape(parameters['pixel_size'], order='F')

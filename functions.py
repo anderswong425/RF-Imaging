@@ -1,3 +1,4 @@
+from scipy.signal import spline_filter
 from skimage.restoration import denoise_tv_chambolle
 from pluto import Pluto
 
@@ -444,7 +445,7 @@ def generate_gain_table(parameters, devices, signal):
 def real_time_visualization(parameters, signal, devices, preparation_func, processing_func):
 
     def data_processing(q, parameters, signal, devices, Pinc, preparation_matrix):
-        i = 0
+        # i = 0
         while True:
             start = time.monotonic()
             Ptot = data_collection_once(parameters, signal, devices)
@@ -459,11 +460,14 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
 
             start = time.monotonic()
             output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
+            # output = spline_filter(output, lmbda=1)
+
             print('Denoising:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
-            i += 1
-            if i == 5:
-                Pinc = Ptot
-                i = 0
+
+            # i += 1
+            # if i == 5:
+            #     Pinc = Ptot
+            #     i = 0
             q.put(output)
 
     def image_display(q, parameters, signal, devices, Pinc, preparation_matrix):
@@ -472,7 +476,9 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
             output = q.get()
             im.set_data(output)
             im.set_clim(vmin=np.min(im.get_array()), vmax=np.max(im.get_array()))
-            im.set_clim(vmin=0, vmax=0.05)
+            im.set_clim(vmin=0)
+
+            # im.set_clim(vmin=0, vmax=0.15)
 
             print('-'*29)
             now = time.monotonic()
