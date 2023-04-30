@@ -27,9 +27,6 @@ class Pluto:
         self.sdr.rx_buffer_size = int(self.num_samples)
         self.sdr.gain_control_mode_chan0 = 'manual'
         self.sdr.rx_hardwaregain_chan0 = self.receiver_gain
-        # self.sdr.gain_control_mode_chan0 = "fast_attack"
-
-        # print(f'Connected to Pluto {idx}')
 
     def transmit(self, signal):
         tx_data = signal * 2**14  # The PlutoSDR expects samples to be between -2^14 and +2^14, not -1 and +1

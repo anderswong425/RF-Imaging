@@ -1,6 +1,5 @@
 from functions import *
-from inverse_RTI import inverse_RTI_algo
-from xPRA import xPRA_preparation, xPRA_test
+from xPRA import xPRA
 
 
 def main():
@@ -24,18 +23,26 @@ def main():
     parameters['detection_size'] = 0.1  # m
 
     parameters['alpha'] = 50  # 1e2
-    parameters['denoising_weight'] = 0.1
+    parameters['denoising_weight'] = 0.2
     parameters['pixel_size'] = (60, ) * 2  # NxN square matrix
 
     parameters['k0'] = 2*np.pi/parameters['wavelength']
     parameters['cellrad'] = parameters['doi_size']/(parameters['pixel_size'][0]*np.sqrt(np.pi))
 
+    parameters['device_coordinates'] = get_device_coordinates(parameters)
+    parameters['grid_coordinates'] = get_grid_coordinates(parameters)
+
     signal = generate_signal()
 
     devices = init_devices(parameters)
 
-    # inverse_RTI_algo(parameters, signal, devices)
-    real_time_visualization(parameters, signal, devices, xPRA_preparation, xPRA_test)
+    # n = 100
+    # start = time.monotonic()
+    # for _ in range(n):
+    #     devices[0].receive()
+    # print((time.monotonic()-start)/n*1000)
+
+    real_time_visualization(parameters, signal, devices, xPRA)
 
 
 if __name__ == '__main__':

@@ -1,16 +1,16 @@
-from skimage.restoration import denoise_tv_chambolle
 from Pluto import Pluto
-
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 import numpy as np
 import os
-import shutil
-from tqdm import tqdm
-import threading
 import time
+import threading
 from multiprocessing import Process, Queue
+
+from skimage.restoration import denoise_tv_chambolle
+from shapely.geometry import LineString, Point
+
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 
 def timing_decorator(func):
@@ -63,304 +63,108 @@ def receive_concurrently(devices):
         thread.join()
 
 
-def config_devices_gain(tx, parameters, devices):
-    threads = []
-    for rx, device in enumerate(devices):
-        threads.append(threading.Thread(target=device.config_gain, args=[parameters['gain_table'][tx][rx]]))
-
-    for thread in threads:  # Start all threads
-        thread.start()
-
-    for thread in threads:  # Wait for all of them to finish
-        thread.join()
+def magnitude_to_dB(MRx, gain):
+    PRx = 7 + 20 * np.log10(MRx/1000) - gain
+    return PRx
 
 
 def data_collection_once(parameters, signal, devices):
-    dataset = np.zeros([len(parameters['device_indices']), len(parameters['device_indices']), parameters['num_samples']], dtype=complex)
+    '''
+    As we only care the RSSI, we take mean across the samples of each link, and 
+    then use the magnitude to calculate the RSSI.
+
+    The received samples from the same transceiver is dropped.
+
+    Returns a numpy array with shape ((num_devices*(num_devices-1)), 1).
+
+    '''
+
+    dataset = np.zeros([len(parameters['device_indices']), len(parameters['device_indices'])], dtype=float)
 
     for tx in range(len(parameters['device_indices'])):
-        # config_devices_gain(tx, parameters, devices)
         devices[tx].transmit(signal)
         receive_concurrently(devices)
         devices[tx].stop_transmit()
 
         for rx in range(len(parameters['device_indices'])):
-            dataset[tx][rx] = devices[rx].data
+            dataset[tx][rx] = abs(np.mean(devices[rx].data))
+
+    dataset = magnitude_to_dB(dataset, parameters['receiver_gain'])
+    dataset = dataset[~np.eye(dataset.shape[0], dtype=bool)].reshape(-1, 1)
 
     return dataset
 
 
-def data_collection(parameters, signal, devices):
-    print('\nCollecting data from the devices...')
-    dataset = []
-    time_sequence = [time.time()]
+def get_device_coordinates(parameters):
+    doi_size = parameters['doi_size']
+    num_deivces = len(parameters['device_indices'])
 
-    for i in tqdm(range(parameters['num_iter'])):
-        dataset.append(data_collection_once(parameters, signal, devices))
-        # time.sleep(10)
-        time_sequence.append(time.time())
+    line = LineString(((-doi_size/2, -doi_size/2), (doi_size/2, -doi_size/2), (doi_size/2, doi_size/2), (-doi_size/2, doi_size/2), (-doi_size/2, -doi_size/2)))
 
-    for i in range(1, len(time_sequence)):
-        time_sequence[i] = round((time_sequence[i] - time_sequence[0]), 3)
-    time_sequence.pop(0)
+    distances = np.linspace(0, line.length, num_deivces+1)
 
-    print(f"Data collection of {parameters['num_iter']} sets of data with {len(parameters['device_indices'])} devices is finished in {time_sequence[-1]:.3f}s")
+    points = [line.interpolate(distance) for distance in distances[:-1]]
 
-    dir = f"result\\{parameters['time']}"
-    create_result_folder(dir)
+    coordinates = [[round(point.x, 2), round(point.y, 2)] for point in points]
 
-    np.save(f"{dir}\\dataset", dataset)
-    np.save(f"{dir}\\time_sequence", time_sequence)
-
-    return dataset, time_sequence
+    return np.array(coordinates)
 
 
-# data processing functions
-def calculate_distance(point1, point2):
-    return np.sqrt((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)
+def get_grid_coordinates(parameters):
+    start = -parameters['doi_size']/2 + parameters['doi_size']/(2*parameters['pixel_size'][0])
+    end = abs(start)
+
+    x = np.linspace(start, end, parameters['pixel_size'][0])
+
+    y = np.linspace(start, end, parameters['pixel_size'][1])
+
+    grid_coordinates_x, grid_coordinates_y = np.meshgrid(x, y)
+
+    return grid_coordinates_x, grid_coordinates_y
 
 
-def create_result_folder(dir):
-    if os.path.exists(dir):
-        #     shutil.rmtree(dir)
-        pass
-    else:
-        os.makedirs(dir)
+def real_time_visualization(parameters, signal, devices, processing_func):
+    '''
+    This function is for real-time display using matplotlib.animation.
+    The data_processing func will collect data repeatedly and handle it with the processing_func,
+    while image_display handles how the window looks like.
 
 
-def friis_transmission_equation(Pt, Gt, Gr, d, freq):
-    lamda = 3e8/freq
-    Pr = Pt + Gt + Gr + 20*np.log10((lamda/(4*np.pi*d)))
-
-    return Pr
-
-
-def magnitude_to_db(MRx, gain):
-    PRx = 7 + 20 * np.log10(MRx/1000) - gain
-    return PRx
-
-
-def constellation_plot(parameters, dataset, same_scale=False):
-    if same_scale == True:
-        lim = 0
-        for i in range(parameters['num_iter']):
-            for tx in range(len(parameters['device_indices'])):
-                for rx in range(len(parameters['device_indices'])):
-                    max = np.max(np.abs(dataset[i][tx][rx]))
-                    if max > lim:
-                        lim = max
-        lim *= 1.1
-
-    tabs = []
-    for i in tqdm(range(parameters['num_iter'])):
-        figures = []
-        for tx in range(len(parameters['device_indices'])):
-            for rx in range(len(parameters['device_indices'])):
-                if same_scale == False:
-                    lim = np.max(np.abs(dataset[i][tx][rx])) * 1.3
-
-                fig = figure(background_fill_color="#fafafa", x_range=(-lim, lim), y_range=(-lim, lim), title=f"Tx{parameters['device_indices'][tx]} Rx{parameters['device_indices'][rx]}")
-                fig.scatter(dataset[i][tx][rx].real, dataset[i][tx][rx].imag, size=5, color="#53777a")
-
-                figures.append(fig)
-
-        grid = gridplot(figures, ncols=len(parameters['device_indices']), width=210, height=210)
-
-        tabs.append(Panel(child=grid, title=str(i+1)))
-
-    print('\nGenerating the dashboard...', end=' ')
-    plot = Tabs(tabs=tabs)
-
-    return plot
-
-
-def magnitude_plot(parameters, dataset, time_sequence):
-    figures = []
-    x = time_sequence
-
-    for tx in tqdm(range(len(parameters['device_indices'])), disable=True):
-        for rx in range(len(parameters['device_indices'])):
-            y = []
-            for i in range(parameters['num_iter']):
-                y.append(np.average(np.abs(dataset[i][tx][rx])))
-
-            fig = figure(background_fill_color="#fafafa", y_range=(0, max(y)*1.4), title=f"Tx{parameters['device_indices'][tx]} Rx{parameters['device_indices'][rx]}")
-            fig.line(x, y, color="firebrick")
-            fig.circle(x, y, color="firebrick")
-            figures.append(fig)
-
-            # if tx != rx:
-            #     print(f"\nTx: {(tx+1)} Rx: {(rx+1)} {int(np.average(y))}")
-
-    grid = gridplot(figures, ncols=len(parameters['device_indices']), width=210, height=210)
-
-    title = '''<b><u>Magnitude</u></b>'''
-
-    plot = column(Div(text=title), grid)
-    return plot
-
-
-def plot_dashboard(parameters, dataset, time_sequence, same_scale=False):
-    output_file("result.html")
-
-    print(f'\nPreparing for data visualization...')
-
-    constellation = constellation_plot(parameters, dataset, same_scale)
-    magnitude = magnitude_plot(parameters, dataset, time_sequence)
-
-    text = f'''<p style='margin-top:150px'></p>
-               <p style='margin:0px 10px; font-size: 17px'>Number of samples: {si_format(parameters['num_samples'], precision=0)}</p>
-               <p style='margin:0px 10px; font-size: 17px'>Sampling rate: {si_format(parameters['sample_rate'], precision=0)}Hz</p>
-               <p style='margin:0px 10px; font-size: 17px'>Bandwidth: {si_format(parameters['bandwidth'], precision=0)}Hz</p>
-               <p style='margin:0px 10px; font-size: 17px'>Center Frequency: {si_format(parameters['center_freq'], precision=2)}Hz</p>
-               <p style='margin:0px 10px; font-size: 17px'>Transmitter attenuation: {parameters['transmitter_attenuation']} dB</p>
-               <p style='margin:0px 10px; font-size: 17px'>Receiver gain: {parameters['receiver_gain']} dB</p>
-               <p style='margin:50px 0px 0px 10px; font-size: 17px'>Number of devices: {len(parameters['device_indices'])}</p>
-               <p style='margin:0px 10px; font-size: 17px'>Number of iterations: {parameters['num_iter']}</p>
-               <p style='margin:0px 10px; font-size: 17px'>Time: {time_sequence[-1]:.3f}s</p>
-            '''
-
-    show(row(children=[constellation, Div(text=text), magnitude], sizing_mode="stretch_both"), new='window')
-    print('\nIt will be shown on the browser when it is ready.')
-    print('It may take a while if the collected dataset is big.')
-
-
-def plot_non_interative(parameters, dataset, time_sequence):
-    x = time_sequence
-
-    fig, axs = plt.subplots(len(parameters['device_indices']), len(parameters['device_indices']))
-
-    for tx in tqdm(range(len(parameters['device_indices'])), disable=True):
-        for rx in range(len(parameters['device_indices'])):
-            y = []
-            for i in range(parameters['num_iter']):
-                y.append(np.average(np.abs(dataset[i][tx][rx])))
-
-            axs[tx, rx].plot(x, y, 'b-')
-            axs[tx, rx].set_ylim(bottom=0, top=max(y)*2)
-            axs[tx, rx].grid()
-            axs[tx, rx].set_title(f"Tx{parameters['device_indices'][tx]} Rx{parameters['device_indices'][rx]}", fontsize=30)
-
-            if tx == rx:
-                for spine in axs[tx, rx].spines.values():
-                    spine.set_edgecolor('red')
-                    spine.set_linewidth(5)
-            # else:
-            #     print(f"\nTx: {parameters['device_indices'][tx]} Rx: {parameters['device_indices'][rx]} {int(np.average(y))}")
-
-    fig.set_size_inches(100, 100, forward=True)
-    parameters_str = f'''
-        Number of samples: {si_format(parameters['num_samples'], precision=0)}
-        Sampling rate: {si_format(parameters['sample_rate'], precision=0)}Hz
-        Bandwidth: {si_format(parameters['bandwidth'], precision=0)}Hz
-        Center Frequency: {si_format(parameters['center_freq'], precision=2)}Hz
-        Transmitter attenuation: {parameters['transmitter_attenuation']} dB
-        Receiver gain: {parameters['receiver_gain']} dB
-
-        Number of devices: {len(parameters['device_indices'])}
-        Number of iterations: {parameters['num_iter']}
-        
-        Time: {time_sequence[-1]:.3f}s
-        '''
-    plt.text(0.0, 0.5, parameters_str, fontsize=50, transform=plt.gcf().transFigure)
-
-    dir = f"result\\{parameters['time']}"
-    create_result_folder(dir)
-
-    plt.savefig(dir + "\\result.png", dpi=150)
-    print(f"Result is saved in '{dir}'")
-    os.startfile(dir + "\\result.png")
-
-
-def get_coordinate(idx, parameters):
-    num_devices = len(parameters['device_indices'])
-    if idx <= num_devices/4+1:
-        x = 0
-        y = parameters['size'] * 4 / num_devices * (idx-1)
-        theta = 0
-    elif idx <= num_devices / 2 + 1:
-        x = parameters['size'] * 4 / num_devices * (idx-num_devices/4-1)
-        y = parameters['size']
-        theta = -np.pi/2
-    elif idx <= num_devices * 3/4 + 1:
-        x = parameters['size']
-        y = parameters['size'] * (1-(idx-1-num_devices/2) * 4 / num_devices)
-        theta = np.pi
-    else:
-        x = parameters['size'] * (1-(idx-1-num_devices*3/4) * 4 / num_devices)
-        y = 0
-        theta = np.pi/2
-
-    if idx == 1:
-        theta = np.pi/4
-    elif idx == 1+num_devices/4:
-        theta = -np.pi/4
-    elif idx == 1+num_devices/4*2:
-        theta = -3*np.pi/4
-    elif idx == 1+num_devices/4*3:
-        theta = 3*np.pi/4
-
-    return [x, y, theta]
-
-
-def generate_gain_table(parameters, devices, signal):
-    if devices[0].sdr.gain_control_mode_chan0 == 'manual':
-        for device in devices:
-            device.sdr.gain_control_mode_chan0 = 'slow_attack'
-
-    gain_table = np.zeros((len(devices), len(devices)), np.int32)
-
-    print('Finding the receiver gain for each channel:')
-    for itx, tx in enumerate(pbar := tqdm(devices)):
-        tx.transmit(signal)
-        time.sleep(10)
-        for irx, rx in enumerate(devices):
-            gain = []
-            if itx != irx:
-                for _ in range(10):
-                    gain.append(rx.sdr._get_iio_attr('voltage0', 'hardwaregain', False))
-                gain_table[itx][irx] = np.mean(gain)
-        pbar.set_description(f"Tx{itx+1}: {gain_table[itx]}")
-
-        tx.stop_transmit()
-
-    return gain_table
-
-
-def real_time_visualization(parameters, signal, devices, preparation_func, processing_func):
-
-    def data_processing(q, parameters, signal, devices, Pinc, preparation_matrix):
+    '''
+    def data_processing(q, parameters, signal, devices, Pinc):
+        i = 0
         while True:
-            start = time.monotonic()
+
+            # start = time.monotonic()
             Ptot = data_collection_once(parameters, signal, devices)
-            print("Data collection:".rjust(20), f"{(time.monotonic()-start):.2f}", 's')
+            # print("Data collection:".rjust(20), f"{(time.monotonic()-start)*1000:.0f}", 'ms')
 
-            Ptot = magnitude_to_db(abs(np.mean(Ptot, axis=2)), parameters['receiver_gain'])
-            Ptot = Ptot[~np.eye(Ptot.shape[0], dtype=bool)].reshape(-1, 1)
+            # start = time.monotonic()
+            output = processing_func(parameters, Pinc, Ptot)
+            # print('XPRA:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
 
-            start = time.monotonic()
-            output = processing_func(parameters, preparation_matrix, preparation_matrix2, Pinc, Ptot)
-            print('XPRA:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
-
-            start = time.monotonic()
+            # start = time.monotonic()
             output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
+            # print('Denoising:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
 
-            print('Denoising:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
+            if i == 0:
+                start = time.monotonic()
+            else:
+                print(f'[{i=}] Average runtime:', f"{(time.monotonic()-start)*1000/(i):.0f}", 'ms')
+            i = i+1
             q.put(output)
 
-    def image_display(q, parameters, signal, devices, Pinc, preparation_matrix):
+    def image_display(q, parameters, signal, devices, Pinc):
         def update(frame, *fargs):
-            parameters, signal, devices, Pinc, preparation_matrix = fargs
+            parameters, signal, devices, Pinc = fargs
             output = q.get()
             im.set_data(output)
-            im.set_clim(vmin=np.min(im.get_array()), vmax=np.max(im.get_array()))
-            im.set_clim(vmin=0)
-
-            # im.set_clim(vmin=0, vmax=0.15)
+            im.set_clim(vmin=0, vmax=np.max(im.get_array()))
+            # im.set_clim(vmax=0.15)
 
             print('-'*29)
             now = time.monotonic()
-            print('Frame acquisition:'.rjust(20), f"{(now - parameters['time']):.2f}", 's\n')
+            # print('Frame acquisition:'.rjust(20), f"{(now - parameters['time']):.2f}", 's\n')
             parameters['time'] = now
 
             return [im]
@@ -377,32 +181,31 @@ def real_time_visualization(parameters, signal, devices, preparation_func, proce
         fig.colorbar(im, fraction=0.1, pad=0.1)
         plt.tight_layout()
 
-        # add devices display on the plot
+        # # add devices display on the plot
         for i in range(parameters['num_devices']):
-            plt.text(*parameters['device_coordinates'][i], s=i+1, va='center', ha='center',
+            plt.text(*parameters['device_coordinates'][i], s=str(i+1).zfill(2), va='center', ha='center',
                      fontdict={'family': 'serif', 'color':  'white', 'weight': 'normal', 'size': 10},
                      bbox=dict(facecolor='black', edgecolor='none'))
 
-        anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc, preparation_matrix,), interval=100)
+        anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc,), interval=10)
+
+        fig.canvas.mpl_connect('close_event', close_event)
         plt.show()
 
-    Pinc = np.mean([data_collection_once(parameters, signal, devices) for _ in range(5)], axis=0)
-    Pinc = magnitude_to_db(abs(np.mean(Pinc, axis=2)), parameters['receiver_gain'])
-    Pinc = Pinc[~np.eye(Pinc.shape[0], dtype=bool)].reshape(-1, 1)
+    def close_event(event):
+        p1.terminate()
+
+    # Pinc = np.mean([data_collection_once(parameters, signal, devices) for _ in range(5)], axis=0)
 
     # for testing using saved Pinc
     # np.save('Pinc.npy', Pinc)
     Pinc = np.load('Pinc.npy')
     parameters['flag'] = 0
 
-    preparation_matrix, preparation_matrix2 = preparation_func(parameters)
-
     q = Queue()
-
-    p1 = Process(target=data_processing, args=(q, parameters, signal, devices, Pinc, preparation_matrix,))
-    p2 = Process(target=image_display, args=(q, parameters, signal, devices, Pinc, preparation_matrix,))
+    p1 = Process(target=data_processing, args=(q, parameters, signal, devices, Pinc,))
+    p2 = Process(target=image_display, args=(q, parameters, signal, devices, Pinc,))
     p1.start()
     p2.start()
-
     p1.join()
     p2.join()
