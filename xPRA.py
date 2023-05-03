@@ -39,6 +39,10 @@ def xPRA(parameters, Pinc, Ptot):
         return Fryt
 
     def quadratic_smoothing(parameters, Pryt, FrytB):
+        '''
+        Reference:
+        https://github.com/dsamruddhi/Inverse-Scattering-Problem/blob/master/inverse_problem/regularize.py
+        '''
         def difference_operator(m, num_grids, direction):
             d_row = np.zeros((1, num_grids))
             d_row[0, 0] = 1

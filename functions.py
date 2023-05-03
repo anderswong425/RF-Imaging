@@ -1,10 +1,13 @@
 from Pluto import Pluto
 
+import curses
 import numpy as np
 import os
 import time
 import threading
 from multiprocessing import Process, Queue
+from scipy.io import savemat
+
 
 from skimage.restoration import denoise_tv_chambolle
 from shapely.geometry import LineString, Point
@@ -22,6 +25,10 @@ def timing_decorator(func):
         print(f'Function {func.__name__}() took {total_time:.4f} seconds')
         return result
     return timeit_wrapper
+
+
+def export_to_mat(arr, name='test'):
+    savemat(name + '.mat', {name: arr})
 
 
 # data collection functions
@@ -51,7 +58,15 @@ def init_devices(parameters):
         return devices
 
 
+def magnitude_to_dB(MRx, gain):
+    PRx = 7 + 20 * np.log10(MRx/1000) - gain
+    return PRx
+
+
 def receive_concurrently(devices):
+    '''
+    To eliminate the data collection time, all devices will receive data at the same time with multithreading.
+    '''
     threads = []
     for device in devices:
         threads.append(threading.Thread(target=device.receive))
@@ -61,11 +76,6 @@ def receive_concurrently(devices):
 
     for thread in threads:  # Wait for all of them to finish
         thread.join()
-
-
-def magnitude_to_dB(MRx, gain):
-    PRx = 7 + 20 * np.log10(MRx/1000) - gain
-    return PRx
 
 
 def data_collection_once(parameters, signal, devices):
@@ -79,14 +89,14 @@ def data_collection_once(parameters, signal, devices):
 
     '''
 
-    dataset = np.zeros([len(parameters['device_indices']), len(parameters['device_indices'])], dtype=float)
+    dataset = np.zeros((parameters['num_devices'], parameters['num_devices']), dtype=float)
 
-    for tx in range(len(parameters['device_indices'])):
+    for tx in range(parameters['num_devices']):
         devices[tx].transmit(signal)
         receive_concurrently(devices)
         devices[tx].stop_transmit()
 
-        for rx in range(len(parameters['device_indices'])):
+        for rx in range(parameters['num_devices']):
             dataset[tx][rx] = abs(np.mean(devices[rx].data))
 
     dataset = magnitude_to_dB(dataset, parameters['receiver_gain'])
@@ -123,38 +133,80 @@ def get_grid_coordinates(parameters):
     return grid_coordinates_x, grid_coordinates_y
 
 
+def result_visualization(parameters, image=None, title=None):
+    '''
+    This function initialize the display for the real time visualization.
+    It can also be used to visualize a single image reconstruction result. 
+
+    '''
+
+    fig, ax = plt.subplots(figsize=(8, 7))
+
+    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+    plt.axis('off')
+
+    im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, cmap='jet',
+                    extent=[-parameters['doi_size']/2, parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2])
+
+    fig.colorbar(im, fraction=0.1, pad=0.1)
+    plt.tight_layout()
+
+    # # add devices display on the plot
+    for i in range(parameters['num_devices']):
+        plt.text(*parameters['device_coordinates'][i], s=str(i+1).zfill(2), va='center', ha='center',
+                 fontdict={'family': 'serif', 'color':  'white', 'weight': 'normal', 'size': 10},
+                 bbox=dict(facecolor='black', edgecolor='none'))
+
+    if image is not None:
+        im.set_data(image)
+        im.set_clim(vmin=0, vmax=np.max(im.get_array()))
+
+        if title is not None:
+            fig.suptitle(title, fontsize=16)
+
+    return fig, im
+
+
 def real_time_visualization(parameters, signal, devices, processing_func):
     '''
     This function is for real-time display using matplotlib.animation.
     The data_processing func will collect data repeatedly and handle it with the processing_func,
     while image_display handles how the window looks like.
 
-
+    To improve the execution speed, these two functions are seperated to different processes.
     '''
     def data_processing(q, parameters, signal, devices, Pinc):
         i = 0
+        screen = curses.initscr()
+        curses.curs_set(0)
+
         while True:
 
-            # start = time.monotonic()
+            start = time.monotonic()
             Ptot = data_collection_once(parameters, signal, devices)
-            # print("Data collection:".rjust(20), f"{(time.monotonic()-start)*1000:.0f}", 'ms')
+            screen.addstr(0, 0, f'Data collection: {(time.monotonic()-start)*1000:.0f}ms\n')
 
-            # start = time.monotonic()
+            # np.save('Ptot.npy', Ptot)
+
+            start = time.monotonic()
             output = processing_func(parameters, Pinc, Ptot)
-            # print('XPRA:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
+            screen.addstr(1, 0, f'xPRA: {(time.monotonic()-start)*1000:.2f}ms\n')
 
-            # start = time.monotonic()
+            start = time.monotonic()
             output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
-            # print('Denoising:'.rjust(20), f"{(time.monotonic()-start)*1000:.2f}", 'ms')
+            screen.addstr(2, 0, f'Denoising: {(time.monotonic()-start)*1000:.2f}ms\n')
 
             if i == 0:
-                start = time.monotonic()
+                process_start = time.monotonic()
             else:
-                print(f'[{i=}] Average runtime:', f"{(time.monotonic()-start)*1000/(i):.0f}", 'ms')
+                screen.addstr(4, 0, f'Average runtime of {i} frames: {(time.monotonic()-process_start)*1000/(i):.0f}ms\n')
+
+            screen.refresh()
             i = i+1
             q.put(output)
 
     def image_display(q, parameters, signal, devices, Pinc):
+
         def update(frame, *fargs):
             parameters, signal, devices, Pinc = fargs
             output = q.get()
@@ -162,32 +214,14 @@ def real_time_visualization(parameters, signal, devices, processing_func):
             im.set_clim(vmin=0, vmax=np.max(im.get_array()))
             # im.set_clim(vmax=0.15)
 
-            print('-'*29)
             now = time.monotonic()
             # print('Frame acquisition:'.rjust(20), f"{(now - parameters['time']):.2f}", 's\n')
             parameters['time'] = now
 
             return [im]
 
-        fig, ax = plt.subplots(figsize=(8, 7))
-
-        plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
-        plt.axis('off')
-
-        im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, cmap='jet',
-                        extent=[-parameters['doi_size']/2, parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2]
-                        )
-
-        fig.colorbar(im, fraction=0.1, pad=0.1)
-        plt.tight_layout()
-
-        # # add devices display on the plot
-        for i in range(parameters['num_devices']):
-            plt.text(*parameters['device_coordinates'][i], s=str(i+1).zfill(2), va='center', ha='center',
-                     fontdict={'family': 'serif', 'color':  'white', 'weight': 'normal', 'size': 10},
-                     bbox=dict(facecolor='black', edgecolor='none'))
-
-        anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc,), interval=10)
+        fig, im = result_visualization(parameters)
+        anim = animation.FuncAnimation(fig, update, fargs=(parameters, signal, devices, Pinc,), interval=10, cache_frame_data=False)
 
         fig.canvas.mpl_connect('close_event', close_event)
         plt.show()
@@ -195,7 +229,7 @@ def real_time_visualization(parameters, signal, devices, processing_func):
     def close_event(event):
         p1.terminate()
 
-    # Pinc = np.mean([data_collection_once(parameters, signal, devices) for _ in range(5)], axis=0)
+    Pinc = np.mean([data_collection_once(parameters, signal, devices) for _ in range(5)], axis=0)
 
     # for testing using saved Pinc
     # np.save('Pinc.npy', Pinc)
