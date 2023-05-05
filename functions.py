@@ -199,7 +199,7 @@ def real_time_visualization(parameters, signal, devices, processing_func):
             if i == 0:
                 process_start = time.monotonic()
             else:
-                screen.addstr(4, 0, f'Average runtime of {i} frames: {(time.monotonic()-process_start)*1000/(i):.0f}ms\n')
+                screen.addstr(4, 0, f'Average acquisition time of {i} frames: {(time.monotonic()-process_start)*1000/(i):.0f}ms\n')
 
             screen.refresh()
             i = i+1
@@ -213,10 +213,6 @@ def real_time_visualization(parameters, signal, devices, processing_func):
             im.set_data(output)
             im.set_clim(vmin=0, vmax=np.max(im.get_array()))
             # im.set_clim(vmax=0.15)
-
-            now = time.monotonic()
-            # print('Frame acquisition:'.rjust(20), f"{(now - parameters['time']):.2f}", 's\n')
-            parameters['time'] = now
 
             return [im]
 

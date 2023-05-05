@@ -23,7 +23,7 @@ def main():
     parameters['doi_size'] = 3  # m
     parameters['detection_size'] = 0.1  # m
 
-    parameters['alpha'] = 50  # 1e2
+    parameters['alpha'] = 100  # 1e2
     parameters['denoising_weight'] = 0.05
     parameters['pixel_size'] = (60, ) * 2  # NxN square matrix
 
