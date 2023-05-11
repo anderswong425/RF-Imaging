@@ -2,8 +2,8 @@ import numpy as np
 from scipy.special import hankel1, jv
 
 
-def xPRA(parameters, Pinc, Ptot):
-    def xPRA_preparation(parameters):
+def xRPI(parameters, Pinc, Ptot):
+    def xRPI_preparation(parameters):
         def calculate_distance(point1, point2):
             return np.sqrt((point1[0]-point2[0])**2+(point1[1]-point2[1])**2)
 
@@ -80,7 +80,7 @@ def xPRA(parameters, Pinc, Ptot):
     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
 
     if not parameters['flag']:
-        Fryt = xPRA_preparation(parameters)
+        Fryt = xRPI_preparation(parameters)
         parameters['G'] = quadratic_smoothing(parameters, Pryt, Fryt)
         parameters['flag'] = True
 

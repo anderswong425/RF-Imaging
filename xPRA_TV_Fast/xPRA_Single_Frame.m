@@ -1,6 +1,6 @@
 %% Description
 %{
-Description: xPRA-LM code fast
+Description: xRPI-LM code fast
 %}
 clear; close all; clc; 
 
@@ -58,7 +58,7 @@ E_inc =   (1i/4)*besselh(0,1,k0*distTxRn);  % M^2 x Ni for cylindrical wave
 % E_inc = exp(1i*k0*distTxRn)./(4*pi*distTxRn);  % Can try for 3D
 clear xt yt xp yp Theta_Tx_Rn Ref_theta_Tx_Rn G_Tx_Rn 
 
-%% Estimate xPRA-LM Kernel
+%% Estimate xRPI-LM Kernel
 Fryt = zeros(length(Nodes(1,:)), M^2);
 Fryt_k = zeros(length(Nodes(1,:)), M^2);
 [xr, xpr] = meshgrid(TxRx(:,1), x(:));
@@ -72,7 +72,7 @@ for i = 1:length(Nodes(1,:))
         (E_inc(:,Nodes(1,i))).')./...
         (E_d(Nodes(2,i), Nodes(1,i)))));
 end
-% xPRA-LM Kernel Matrix:
+% xRPI-LM Kernel Matrix:
 FrytB =  [real(Fryt) -imag(Fryt)]; 
 
 

@@ -340,7 +340,7 @@ def generate_gain_table(parameters, devices, signal):
     return gain_table
 
 
-def xPRA_preparation(parameters):
+def xRPI_preparation(parameters):
     device_coordinates = get_device_coordinates(parameters)
 
     grid_coordinates_x, grid_coordinates_y = get_grid_coordinates(parameters)
@@ -381,7 +381,7 @@ def xPRA_preparation(parameters):
     return FrytB, FrytBat
 
 
-def xPRA(parameters, FrytB, FrytBat, Pinc, Ptot):
+def xRPI(parameters, FrytB, FrytBat, Pinc, Ptot):
 
     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
 

@@ -25,7 +25,7 @@ load('E_d.mat','E_d')
 load('E_s.mat','E_s')
 %% Important Global Paramters
 gridXres = 0.05;  gridYres = gridXres;  %  Resolution of grid
-Method = 'xPRA';  % RTI xPRAI xPRA
+Method = 'xRPI';  % RTI xRPII xRPI
 Methodreg = 'ridge'; % 'tv'    'ridge' 'H1'
 Eterm = 1;
 alph = 0.5; 
@@ -60,13 +60,13 @@ E_inc =   (1i/4)*besselh(0,1,k0*distTxRn);  % M^2 x Ni for cylindrical wave
 % E_inc = exp(1i*k0*distTxRn)./(4*pi*distTxRn);  % M^2 x Ni for cylindrical wave
 clear xt yt xp yp Theta_Tx_Rn Ref_theta_Tx_Rn G_Tx_Rn 
 
-%% Implement xPRA
+%% Implement xRPI
 Fryt = zeros(length(Nodes(1,:)), M^2);
 // Fryt_k = zeros(length(Nodes(1,:)), M^2);
 [xr, xpr] = meshgrid(TxRx(:,1), x(:));
 [yr, ypr] = meshgrid(TxRx(:,2), y(:));
 distRxRn = (sqrt((xr-xpr).^2 + (yr-ypr).^2))';
-if strcmp(Method,'xPRA')
+if strcmp(Method,'xRPI')
     Zryt=((1i*pi*cellrad/(2*k0))*...
         besselj(1,k0*cellrad)*...
         besselh(0,1,k0*distRxRn)); % Integral of Greens

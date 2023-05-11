@@ -1,5 +1,5 @@
 from functions import *
-from xPRA import xPRA
+from xRPI import xRPI
 
 
 def main():
@@ -36,12 +36,12 @@ def main():
     signal = generate_signal()
     devices = init_devices(parameters)
 
-    real_time_visualization(parameters, signal, devices, processing_func=xPRA)
+    real_time_visualization(parameters, signal, devices, processing_func=xRPI)
 
     # Pinc = np.load('Pinc.npy')
-    # Ptot = np.load('Ptot.npy')
+    # Ptot = data_collection_once(parameters, signal, devices)
 
-    # result = xPRA(parameters, Pinc, Ptot)
+    # result = xRPI(parameters, Pinc, Ptot)
     # result_visualization(parameters, result, f"Reconstruction with Tikhonov Regularization [alpha={parameters['alpha']}]")
     # result_visualization(parameters, denoise_tv_chambolle(result), 'Further Denoise with TV Denoising [weight=0.1]')
 

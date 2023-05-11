@@ -1,31 +1,49 @@
-import curses
+
 import time
 
-# Initialize the screen
-screen = curses.initscr()
+import adi
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy import signal
 
-# Create a window for the header
-header = curses.newwin(3, curses.COLS, 0, 0)
+# Create radio
+sdr = adi.Pluto(f"ip:192.168.5.1")
 
-# Create a window for the body
-body = curses.newwin(curses.LINES-3, curses.COLS, 3, 0)
+# Configure properties
+sdr.rx_rf_bandwidth = 4000000
+sdr.rx_lo = 2000000000
+sdr.tx_lo = 2000000000
+sdr.tx_cyclic_buffer = True
+sdr.tx_hardwaregain_chan0 = -30
+sdr.gain_control_mode_chan0 = "slow_attack"
 
-# Print the header text
-header.addstr(0, 0, "Header line 1")
-header.addstr(1, 0, "Header line 2")
-header.addstr(2, 0, "Header line 3")
+# Read properties
+print("RX LO %s" % (sdr.rx_lo))
 
-# Print the body text
-body.addstr(0, 0, "Body line 1")
-body.addstr(1, 0, "Body line 2")
-body.addstr(2, 0, "Body line 3")
+# Create a sinewave waveform
+fs = int(sdr.sample_rate)
+N = 1024
+fc = int(3000000 / (fs / N)) * (fs / N)
+ts = 1 / float(fs)
+t = np.arange(0, N * ts, ts)
+i = np.cos(2 * np.pi * t * fc) * 2 ** 14
+q = np.sin(2 * np.pi * t * fc) * 2 ** 14
+iq = i + 1j * q
 
-# Refresh the windows to display the text
-header.refresh()
-body.refresh()
+# Send data
+sdr.tx(iq)
 
-# Wait for 5 seconds
-time.sleep(5)
+# Collect data
+for r in range(20):
+    x = sdr.rx()
+    f, Pxx_den = signal.periodogram(x, fs)
+    plt.clf()
+    plt.semilogy(f, Pxx_den)
+    plt.ylim([1e-7, 1e2])
+    plt.xlabel("frequency [Hz]")
+    plt.ylabel("PSD [V**2/Hz]")
+    plt.draw()
+    plt.pause(0.05)
+    time.sleep(0.1)
 
-# Clean up and exit
-curses.endwin()
+plt.show()

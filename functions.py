@@ -190,7 +190,7 @@ def real_time_visualization(parameters, signal, devices, processing_func):
 
             start = time.monotonic()
             output = processing_func(parameters, Pinc, Ptot)
-            screen.addstr(1, 0, f'xPRA: {(time.monotonic()-start)*1000:.2f}ms\n')
+            screen.addstr(1, 0, f'xRPI: {(time.monotonic()-start)*1000:.2f}ms\n')
 
             start = time.monotonic()
             output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
