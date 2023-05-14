@@ -1,6 +1,6 @@
 from functions import *
-from xRPI import xRPI
-from RTI import RTI
+from reconstruction_algorithm.xRPI import xRPI
+# from reconstruction_algorithm.RTI import RTI
 
 
 def main():
@@ -37,7 +37,7 @@ def main():
     signal = generate_signal()
     devices = init_devices(parameters)
 
-    real_time_visualization(parameters, signal, devices, processing_func=RTI)
+    real_time_visualization(parameters, signal, devices, processing_func=xRPI)
 
     # Pinc = np.load('Pinc.npy')
     # Ptot = data_collection_once(parameters, signal, devices)
