@@ -1,11 +1,10 @@
 import numpy as np
 from scipy.special import hankel1, jv
 
-
 '''
-The original implementation of the xRPI algorithm.
-The result is not as good as the one with quadratic smoothing. 
-The calculation is more complicated which will take longer time but it is a simplified version.
+This is the updated version of xRPI implementation.
+Unlike the original, non-simplified version, there is a part of calculation can be completely separated.
+It should be used rather than the original one as the performance is much better.
 '''
 
 
@@ -43,25 +42,56 @@ def xRPI(parameters, Pinc, Ptot):
 
                     idx += 1
 
-        # FrytB = np.concatenate((Fryt.real, -Fryt.imag), axis=1)
-        FrytB = -Fryt.imag
-        FrytBat = FrytB.T @ FrytB
+        return Fryt
 
-        return FrytB, FrytBat
+    def quadratic_smoothing(parameters, Pryt, FrytB):
+        '''
+        Reference:
+        https://github.com/dsamruddhi/Inverse-Scattering-Problem/blob/master/inverse_problem/regularize.py
+        '''
+        def difference_operator(m, num_grids, direction):
+            d_row = np.zeros((1, num_grids))
+            d_row[0, 0] = 1
+
+            if direction == "horizontal":
+                d_row[0, 1] = -2
+                d_row[0, 2] = 1
+
+            elif direction == "vertical":
+                d_row[0, m] = -2
+                d_row[0, 2 * m] = 1
+
+            else:
+                raise ValueError("Invalid direction value for difference operator")
+
+            rows = list()
+            rows.append(d_row)
+            for i in range(0, num_grids - 1):
+                shifted_row = np.roll(d_row, 1)
+                shifted_row[0, 0] = 0
+                rows.append(shifted_row)
+                d_row = shifted_row
+
+            d = np.vstack([row for row in rows])
+            return d
+
+        m = parameters['pixel_size'][0]
+        dim = m**2
+
+        Dx = difference_operator(m, dim, 'horizontal')
+        Dy = difference_operator(m, dim, 'vertical')
+
+        return np.linalg.inv((Fryt.T @ Fryt) + parameters['alpha'] * (Dx.T @ Dx + Dy.T @ Dy)) @ Fryt.T
 
     Pryt = (Ptot-Pinc)/(20*np.log10(np.exp(1)))
 
     if not parameters['flag']:
-        FrytB, FrytBat = xRPI_preparation(parameters)
-
-        lambda_max = np.linalg.norm((FrytB.T @ Pryt), ord=2)
-        parameters['G'] = np.linalg.solve(FrytBat + lambda_max * parameters['alpha'] * np.identity(FrytB.shape[1]), FrytB.T)
-
+        Fryt = xRPI_preparation(parameters)
+        parameters['G'] = quadratic_smoothing(parameters, Pryt, Fryt)
         parameters['flag'] = True
 
-    Oimag = parameters['G'] @ Pryt
-    epr = 4*np.pi*(Oimag*0.5)/parameters['wavelength']
+    chi = (parameters['G'] @ Pryt).imag
 
-    epr[epr < 0] = 0
+    chi[chi < 0] = 0
 
-    return epr.reshape(parameters['pixel_size'], order='F')
+    return chi.reshape(parameters['pixel_size'], order='F')
