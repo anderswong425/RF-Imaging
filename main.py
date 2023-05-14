@@ -1,5 +1,6 @@
 from functions import *
 from xRPI import xRPI
+from RTI import RTI
 
 
 def main():
@@ -21,7 +22,7 @@ def main():
 
     # imaging parameters
     parameters['doi_size'] = 3  # m
-    parameters['detection_size'] = 0.1  # m
+    parameters['detection_size'] = 0.2  # m
 
     parameters['alpha'] = 100  # 1e2
     parameters['denoising_weight'] = 0.05
@@ -36,13 +37,13 @@ def main():
     signal = generate_signal()
     devices = init_devices(parameters)
 
-    real_time_visualization(parameters, signal, devices, processing_func=xRPI)
+    real_time_visualization(parameters, signal, devices, processing_func=RTI)
 
     # Pinc = np.load('Pinc.npy')
     # Ptot = data_collection_once(parameters, signal, devices)
 
     # result = xRPI(parameters, Pinc, Ptot)
-    # result_visualization(parameters, result, f"Reconstruction with Tikhonov Regularization [alpha={parameters['alpha']}]")
+    # result_visualization(parameters, result)
     # result_visualization(parameters, denoise_tv_chambolle(result), 'Further Denoise with TV Denoising [weight=0.1]')
 
     # plt.show()
