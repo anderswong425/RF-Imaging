@@ -15,13 +15,13 @@ def RTI(parameters, Pinc, Ptot):
             for rx in range(parameters['num_devices']):
                 dist_txrx[tx][rx] = calculate_distance((device_xx[tx], device_yy[tx]), (device_xx[rx], device_yy[rx]))
 
-        dist_grid2device = np.zeros((*parameters['pixel_size'], parameters['num_devices']))
-        for y in range(parameters['pixel_size'][1]):
-            for x in range(parameters['pixel_size'][0]):
+        dist_grid2device = np.zeros((*parameters['resolution'], parameters['num_devices']))
+        for y in range(parameters['resolution'][1]):
+            for x in range(parameters['resolution'][0]):
                 for device in range(parameters['num_devices']):
                     dist_grid2device[x][y][device] = (calculate_distance((grid_xx[x][y], grid_yy[x][y]), (device_xx[device], device_yy[device])))
 
-        F_RTI = np.zeros(((parameters['num_devices'])*(parameters['num_devices']-1), *parameters['pixel_size']))
+        F_RTI = np.zeros(((parameters['num_devices'])*(parameters['num_devices']-1), *parameters['resolution']))
 
         idx = 0
         for tx in range(parameters['num_devices']):
@@ -36,7 +36,7 @@ def RTI(parameters, Pinc, Ptot):
                     idx += 1
 
         F_RTI = F_RTI.reshape((parameters['num_devices'])*(parameters['num_devices']-1), -1)
-        RTI_matrix = np.linalg.solve((np.matmul(F_RTI.T, F_RTI) + parameters['alpha'] * np.identity((parameters['pixel_size'][0]**2))),  F_RTI.T)
+        RTI_matrix = np.linalg.solve((np.matmul(F_RTI.T, F_RTI) + parameters['alpha'] * np.identity((parameters['resolution'][0]**2))),  F_RTI.T)
 
         return RTI_matrix
 
@@ -53,4 +53,4 @@ def RTI(parameters, Pinc, Ptot):
 
     output[output < 0] = 0
 
-    return np.rot90(output.reshape(parameters['pixel_size'], order='F'))
+    return np.rot90(output.reshape(parameters['resolution'], order='F'))

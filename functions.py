@@ -121,12 +121,12 @@ def get_device_coordinates(parameters):
 
 
 def get_grid_coordinates(parameters):
-    start = -parameters['doi_size']/2 + parameters['doi_size']/(2*parameters['pixel_size'][0])
+    start = -parameters['doi_size']/2 + parameters['doi_size']/(2*parameters['resolution'][0])
     end = abs(start)
 
-    x = np.linspace(start, end, parameters['pixel_size'][0])
+    x = np.linspace(start, end, parameters['resolution'][0])
 
-    y = np.linspace(start, end, parameters['pixel_size'][1])
+    y = np.linspace(start, end, parameters['resolution'][1])
 
     grid_coordinates_x, grid_coordinates_y = np.meshgrid(x, y)
 
@@ -145,7 +145,7 @@ def result_visualization(parameters, image=None, title=None):
     plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
     plt.axis('off')
 
-    im = plt.imshow(np.zeros(parameters['pixel_size']), vmin=0, vmax=1, cmap='jet',
+    im = plt.imshow(np.zeros(parameters['resolution']), vmin=0, vmax=1, cmap='jet',
                     extent=[-parameters['doi_size']/2, parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2])
 
     fig.colorbar(im, fraction=0.1, pad=0.1)
@@ -167,7 +167,7 @@ def result_visualization(parameters, image=None, title=None):
     return fig, im
 
 
-def real_time_visualization(parameters, signal, devices, processing_func):
+def real_time_visualization(parameters, signal, devices, processing_func, denoising_func=None):
     '''
     This function is for real-time display using matplotlib.animation.
     The data_processing func will collect data repeatedly and handle it with the processing_func,
@@ -190,16 +190,17 @@ def real_time_visualization(parameters, signal, devices, processing_func):
 
             start = time.monotonic()
             output = processing_func(parameters, Pinc, Ptot)
-            screen.addstr(1, 0, f'Imaging algorithm: {(time.monotonic()-start)*1000:.2f}ms\n')
+            screen.addstr(1, 0, f'Imaging reconstruction: {(time.monotonic()-start)*1000:.2f}ms\n')
 
-            # start = time.monotonic()
-            # output = denoise_tv_chambolle(output, weight=parameters['denoising_weight'])
-            # screen.addstr(2, 0, f'Denoising: {(time.monotonic()-start)*1000:.2f}ms\n')
+            if denoising_func is not None:
+                start = time.monotonic()
+                output = denoising_func(output, weight=parameters['denoising_weight'])
+                screen.addstr(2, 0, f'Denoising: {(time.monotonic()-start)*1000:.2f}ms\n')
 
             if i == 0:
                 process_start = time.monotonic()
             else:
-                screen.addstr(4, 0, f'Average acquisition time of {i} frames: {(time.monotonic()-process_start)*1000/(i):.0f}ms\n')
+                screen.addstr(4, 0, f'Average acquisition time of {i} frames: {(time.monotonic()-process_start)*1000/(i):.0f}ms\n\n')
 
             screen.refresh()
             i = i+1

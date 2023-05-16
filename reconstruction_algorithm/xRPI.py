@@ -32,7 +32,7 @@ def xRPI(parameters, Pinc, Ptot):
 
         E_d = (1j/4)*hankel1(0, parameters['k0']*dist_txrx)
         E_inc = (1j/4)*hankel1(0, parameters['k0']*distRxRn)
-        Fryt = np.zeros((parameters['num_devices']*(parameters['num_devices']-1), parameters['pixel_size'][0]**2), dtype=complex)
+        Fryt = np.zeros((parameters['num_devices']*(parameters['num_devices']-1), parameters['resolution'][0]**2), dtype=complex)
 
         idx = 0
         for tx in range(parameters['num_devices']):
@@ -75,7 +75,7 @@ def xRPI(parameters, Pinc, Ptot):
             d = np.vstack([row for row in rows])
             return d
 
-        m = parameters['pixel_size'][0]
+        m = parameters['resolution'][0]
         dim = m**2
 
         Dx = difference_operator(m, dim, 'horizontal')
@@ -94,4 +94,4 @@ def xRPI(parameters, Pinc, Ptot):
 
     chi[chi < 0] = 0
 
-    return chi.reshape(parameters['pixel_size'], order='F')
+    return chi.reshape(parameters['resolution'], order='F')

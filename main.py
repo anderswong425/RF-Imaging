@@ -1,13 +1,13 @@
 from functions import *
+
 from reconstruction_algorithm.xRPI import xRPI
-# from reconstruction_algorithm.RTI import RTI
+from reconstruction_algorithm.RTI import RTI
+
+from skimage.restoration import denoise_tv_chambolle
 
 
 def main():
     parameters = {}
-    parameters['time'] = time.monotonic()
-    parameters['flag'] = False
-
     parameters['num_devices'] = 20
     parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
 
@@ -21,23 +21,23 @@ def main():
     parameters['wavelength'] = 3e8/parameters['center_freq']
 
     # imaging parameters
-    parameters['doi_size'] = 3  # m
-    parameters['detection_size'] = 0.2  # m
+    parameters['detection_size'] = 0.2  # RTI
 
+    parameters['doi_size'] = 3  # domain of interest
+    parameters['resolution'] = (60, ) * 2  # pixek count
     parameters['alpha'] = 100  # 1e2
     parameters['denoising_weight'] = 0.05
-    parameters['pixel_size'] = (60, ) * 2  # NxN square matrix
-
     parameters['k0'] = 2*np.pi/parameters['wavelength']
-    parameters['cellrad'] = parameters['doi_size']/(parameters['pixel_size'][0]*np.sqrt(np.pi))
+    parameters['cellrad'] = parameters['doi_size']/(parameters['resolution'][0]*np.sqrt(np.pi))
 
     parameters['device_coordinates'] = get_device_coordinates(parameters)
     parameters['grid_coordinates'] = get_grid_coordinates(parameters)
+    parameters['flag'] = False
 
     signal = generate_signal()
     devices = init_devices(parameters)
 
-    real_time_visualization(parameters, signal, devices, processing_func=xRPI)
+    real_time_visualization(parameters, signal, devices, processing_func=xRPI, denoising_func=denoise_tv_chambolle)
 
     # Pinc = np.load('Pinc.npy')
     # Ptot = data_collection_once(parameters, signal, devices)
