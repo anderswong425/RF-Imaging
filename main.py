@@ -1,6 +1,6 @@
 from functions import *
 
-from reconstruction_algorithm.xRPI import xRPI
+from reconstruction_algorithm.xPRA import xPRA
 from reconstruction_algorithm.RTI import RTI
 
 from skimage.restoration import denoise_tv_chambolle
@@ -12,6 +12,11 @@ def main():
     parameters['device_indices'] = [x+1 for x in range(parameters['num_devices'])]
 
     # device parameters
+    '''
+    In fact, device parameters other than 'transmitter_attenuation', 'receiver_gain' and 'center_freq' don't notably affect the performance
+    as the rx() of each PlutoSDR takes only a few milliseconds and bandwidth is abundant for the simple signal generated.
+    
+    '''
     parameters['sample_rate'] = 10e6  # Hz
     parameters['num_samples'] = 100  # number of samples per call to rx()
     parameters['center_freq'] = 2.4e9  # Hz
@@ -24,9 +29,11 @@ def main():
     parameters['detection_size'] = 0.2  # RTI
 
     parameters['doi_size'] = 3  # domain of interest
-    parameters['resolution'] = (60, ) * 2  # pixek count
+    parameters['resolution'] = (60, ) * 2  # pixel count
     parameters['alpha'] = 100  # 1e2
     parameters['denoising_weight'] = 0.05
+    parameters['threshold'] = 0.4
+
     parameters['k0'] = 2*np.pi/parameters['wavelength']
     parameters['cellrad'] = parameters['doi_size']/(parameters['resolution'][0]*np.sqrt(np.pi))
 
@@ -37,12 +44,12 @@ def main():
     signal = generate_signal()
     devices = init_devices(parameters)
 
-    real_time_visualization(parameters, signal, devices, processing_func=xRPI, denoising_func=denoise_tv_chambolle)
+    real_time_visualization(parameters, signal, devices, processing_func=xPRA, denoising_func=denoise_tv_chambolle)
 
     # Pinc = np.load('Pinc.npy')
-    # Ptot = data_collection_once(parameters, signal, devices)
+    # Ptot = np.load('book/Ptot100.npy')
 
-    # result = xRPI(parameters, Pinc, Ptot)
+    # result = xPRA(parameters, Pinc, Ptot)
     # result_visualization(parameters, result)
     # result_visualization(parameters, denoise_tv_chambolle(result), 'Further Denoise with TV Denoising [weight=0.1]')
 

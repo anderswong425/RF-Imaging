@@ -133,35 +133,46 @@ def get_grid_coordinates(parameters):
     return grid_coordinates_x, grid_coordinates_y
 
 
-def result_visualization(parameters, image=None, title=None):
+def result_visualization(parameters, image=None, title=None, show_coordinate=False, show_device=True, normailze=True):
     '''
     This function initialize the display for the real time visualization.
     It can also be used to visualize a single image reconstruction result. 
 
     '''
+    if normailze == True:
+        if image is not None:
+            image = image/image.max()
+            image[image < parameters['threshold']] = 0
 
-    fig, ax = plt.subplots(figsize=(8, 7))
+    fig, ax = plt.subplots(figsize=(11, 8))
 
-    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
-    plt.axis('off')
+    if show_coordinate == False:
+        plt.axis('off')
+    else:
+        plt.grid(False)
 
     im = plt.imshow(np.zeros(parameters['resolution']), vmin=0, vmax=1, cmap='jet',
                     extent=[-parameters['doi_size']/2, parameters['doi_size']/2, -parameters['doi_size']/2, parameters['doi_size']/2])
 
     fig.colorbar(im, fraction=0.1, pad=0.1)
-    plt.tight_layout()
+    plt.tight_layout(pad=5)
 
-    # # add devices display on the plot
-    for i in range(parameters['num_devices']):
-        plt.text(*parameters['device_coordinates'][i], s=str(i+1).zfill(2), va='center', ha='center',
-                 fontdict={'family': 'serif', 'color':  'white', 'weight': 'normal', 'size': 10},
-                 bbox=dict(facecolor='black', edgecolor='none'))
+    # add devices display on the plot
+    if show_device == True:
+        for i in range(parameters['num_devices']):
+            plt.text(*parameters['device_coordinates'][i], s=f'{i+1:02d}', va='baseline', ha='center',
+                     fontdict={'family': 'serif', 'color':  'black', 'weight': 'bold', 'size': 11},
+                     bbox=dict(facecolor='orange', edgecolor='black', boxstyle="circle,pad=0.5"))
 
     if image is not None:
         im.set_data(image)
-        im.set_clim(vmin=0, vmax=np.max(im.get_array()))
+        if normailze == True:
+            im.set_clim(vmin=0, vmax=1)
+        else:
+            im.set_clim(vmin=0, vmax=image.max())
 
         if title is not None:
+
             fig.suptitle(title, fontsize=16)
 
     return fig, im
@@ -186,7 +197,7 @@ def real_time_visualization(parameters, signal, devices, processing_func, denois
             Ptot = data_collection_once(parameters, signal, devices)
             screen.addstr(0, 0, f'Data collection: {(time.monotonic()-start)*1000:.0f}ms\n')
 
-            # np.save('Ptot.npy', Ptot)
+            # np.save(f'walking/Ptot{i}.npy', Ptot)
 
             start = time.monotonic()
             output = processing_func(parameters, Pinc, Ptot)
@@ -202,6 +213,7 @@ def real_time_visualization(parameters, signal, devices, processing_func, denois
             else:
                 screen.addstr(4, 0, f'Average acquisition time of {i} frames: {(time.monotonic()-process_start)*1000/(i):.0f}ms\n\n')
 
+            output = output/output.max()
             screen.refresh()
             i = i+1
             q.put(output)
