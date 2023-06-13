@@ -133,13 +133,13 @@ def get_grid_coordinates(parameters):
     return grid_coordinates_x, grid_coordinates_y
 
 
-def result_visualization(parameters, image=None, title=None, show_coordinate=False, show_device=True, normailze=True):
+def result_visualization(parameters, image=None, title=None, show_coordinate=False, show_device=True):
     '''
     This function initialize the display for the real time visualization.
     It can also be used to visualize a single image reconstruction result. 
 
     '''
-    if normailze == True:
+    if parameters['normailze'] == True:
         if image is not None:
             image = image/image.max()
             image[image < parameters['threshold']] = 0
@@ -163,10 +163,14 @@ def result_visualization(parameters, image=None, title=None, show_coordinate=Fal
             plt.text(*parameters['device_coordinates'][i], s=f'{i+1:02d}', va='baseline', ha='center',
                      fontdict={'family': 'serif', 'color':  'black', 'weight': 'bold', 'size': 11},
                      bbox=dict(facecolor='orange', edgecolor='black', boxstyle="circle,pad=0.5"))
+            if i == 0:
+                plt.text(*parameters['device_coordinates'][i], s=f'{i+1:02d}', va='baseline', ha='center',
+                         fontdict={'family': 'serif', 'color':  'black', 'weight': 'bold', 'size': 11},
+                         bbox=dict(facecolor='red', edgecolor='black', boxstyle="circle,pad=0.5"))
 
     if image is not None:
         im.set_data(image)
-        if normailze == True:
+        if parameters['normailze'] == True:
             im.set_clim(vmin=0, vmax=1)
         else:
             im.set_clim(vmin=0, vmax=image.max())
@@ -208,12 +212,15 @@ def real_time_visualization(parameters, signal, devices, processing_func, denois
                 output = denoising_func(output, weight=parameters['denoising_weight'])
                 screen.addstr(2, 0, f'Denoising: {(time.monotonic()-start)*1000:.2f}ms\n')
 
+            if parameters['normailze'] == True:
+                # output = output/output.max()
+                output[output < parameters['threshold']] = 0
+
             if i == 0:
                 process_start = time.monotonic()
             else:
                 screen.addstr(4, 0, f'Average acquisition time of {i} frames: {(time.monotonic()-process_start)*1000/(i):.0f}ms\n\n')
 
-            output = output/output.max()
             screen.refresh()
             i = i+1
             q.put(output)
@@ -225,7 +232,7 @@ def real_time_visualization(parameters, signal, devices, processing_func, denois
             output = q.get()
             im.set_data(output)
             im.set_clim(vmin=0, vmax=np.max(im.get_array()))
-            # im.set_clim(vmax=0.15)
+            im.set_clim(vmax=0.08)
 
             return [im]
 
@@ -241,8 +248,11 @@ def real_time_visualization(parameters, signal, devices, processing_func, denois
     Pinc = np.mean([data_collection_once(parameters, signal, devices) for _ in range(5)], axis=0)
 
     # for testing using saved Pinc
-    # np.save('Pinc.npy', Pinc)
-    Pinc = np.load('Pinc.npy')
+    if parameters['saved_Pinc'] == True:
+        Pinc = np.load('Pinc.npy')
+    else:
+        np.save('Pinc.npy', Pinc)
+
     parameters['flag'] = 0
 
     q = Queue()

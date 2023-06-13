@@ -30,9 +30,9 @@ def main():
 
     parameters['doi_size'] = 3  # domain of interest
     parameters['resolution'] = (60, ) * 2  # pixel count
-    parameters['alpha'] = 100  # 1e2
-    parameters['denoising_weight'] = 0.05
-    parameters['threshold'] = 0.4
+    parameters['alpha'] = 1e3  # 1e2
+    parameters['denoising_weight'] = 0.03  # 0.03
+    parameters['threshold'] = 0.03  # 0.4
 
     parameters['k0'] = 2*np.pi/parameters['wavelength']
     parameters['cellrad'] = parameters['doi_size']/(parameters['resolution'][0]*np.sqrt(np.pi))
@@ -40,14 +40,16 @@ def main():
     parameters['device_coordinates'] = get_device_coordinates(parameters)
     parameters['grid_coordinates'] = get_grid_coordinates(parameters)
     parameters['flag'] = False
+    parameters['saved_Pinc'] = True  # C hange this into "False" will replace 1st frame as new Pinc
+    parameters['normailze'] = True
 
     signal = generate_signal()
     devices = init_devices(parameters)
 
     real_time_visualization(parameters, signal, devices, processing_func=xPRA, denoising_func=denoise_tv_chambolle)
 
-    # Pinc = np.load('Pinc.npy')
-    # Ptot = np.load('book/Ptot100.npy')
+    # Pinc = np.load('result/book/Pinc.npy')
+    # Ptot = np.load('result/book/book.npy')
 
     # result = xPRA(parameters, Pinc, Ptot)
     # result_visualization(parameters, result)
