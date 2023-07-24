@@ -34,7 +34,7 @@ This repository contains the codebase for the RF Imaging System, which utilizes 
     pip3 install -r requirements.txt
     ```
 
-## Hareware Setup
+## Hardware Setup
 - To create the imaging domain, the PlutoSDR boards are placed in an evenly spaced and anticlockwise configuration, as shown in the diagram below:
 ![Alt text](/result/transceiver_config.png)
 
