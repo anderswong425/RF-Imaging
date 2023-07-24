@@ -105,6 +105,9 @@ def data_collection_once(parameters, signal, devices):
     return dataset
 
 
+True
+
+
 def get_device_coordinates(parameters):
     doi_size = parameters['doi_size']
     num_deivces = len(parameters['device_indices'])
@@ -163,10 +166,6 @@ def result_visualization(parameters, image=None, title=None, show_coordinate=Fal
             plt.text(*parameters['device_coordinates'][i], s=f'{i+1:02d}', va='baseline', ha='center',
                      fontdict={'family': 'serif', 'color':  'black', 'weight': 'bold', 'size': 11},
                      bbox=dict(facecolor='orange', edgecolor='black', boxstyle="circle,pad=0.5"))
-            if i == 0:
-                plt.text(*parameters['device_coordinates'][i], s=f'{i+1:02d}', va='baseline', ha='center',
-                         fontdict={'family': 'serif', 'color':  'black', 'weight': 'bold', 'size': 11},
-                         bbox=dict(facecolor='red', edgecolor='black', boxstyle="circle,pad=0.5"))
 
     if image is not None:
         im.set_data(image)
@@ -201,7 +200,7 @@ def real_time_visualization(parameters, signal, devices, processing_func, denois
             Ptot = data_collection_once(parameters, signal, devices)
             screen.addstr(0, 0, f'Data collection: {(time.monotonic()-start)*1000:.0f}ms\n')
 
-            # np.save(f'walking/Ptot{i}.npy', Ptot)
+            # np.save(f'test/Ptot{i}.npy', Ptot)
 
             start = time.monotonic()
             output = processing_func(parameters, Pinc, Ptot)

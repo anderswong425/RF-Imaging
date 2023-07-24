@@ -1,7 +1,8 @@
 # RF Imaging with PlutoSDR
 
-This project aims to develop a reliable and efficient RF imaging system using PlutoSDR transceivers in Python. It includes a hardware control module and an algorithm for image reconstruction from RF signals.
+This repository contains the codebase for the RF Imaging System, which utilizes PlutoSDR for real-time image reconstruction. The system is capable of capturing an environment using received RF signals and reconstructing images based on the signal propagation.
 
-The hardware control module provides an interface to easily configure the PlutoSDR transceivers and acquire the RF signals. It allows for flexible parameter settings, such as the number of transceivers, which can be adjusted to accommodate different imaging scenarios.
+## Setup
+1. Clone the repository: Begin by cloning this repository to your local machine using the following command:
 
-The image reconstruction algorithm takes the acquired RF signals and applies advanced signal processing techniques to reconstruct the underlying image. The algorithm is designed to be computationally efficient and scalable to handle large amounts of data.
+git clone https://github.com/anderswong425/RF-Imaging.git

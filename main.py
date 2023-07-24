@@ -40,8 +40,8 @@ def main():
     parameters['device_coordinates'] = get_device_coordinates(parameters)
     parameters['grid_coordinates'] = get_grid_coordinates(parameters)
     parameters['flag'] = False
-    parameters['saved_Pinc'] = True  # C hange this into "False" will replace 1st frame as new Pinc
-    parameters['normailze'] = True
+    parameters['saved_Pinc'] = True  # Change this into "False" will replace 1st frame as new Pinc
+    parameters['normailze'] = False
 
     signal = generate_signal()
     devices = init_devices(parameters)
