@@ -4,14 +4,14 @@ This repository contains the codebase for the RF Imaging System, which utilizes 
 
 ## Setup
 1. Clone the repository:
-```
-git clone https://github.com/anderswong425/RF-Imaging.git
-```
+    ```
+    git clone https://github.com/anderswong425/RF-Imaging.git
+    ```
 
 2. Install PludoSRD driver:
-```
-. PludoSRD_driver_installation.sh
-```
+    ```
+    . PludoSRD_driver_installation.sh
+    ```
 
 3. Update PlutoSDR firmware:
     1. Download the plutosdr-fw-vX.XX.zip from https://github.com/analogdevicesinc/plutosdr-fw/releases/latest
@@ -30,14 +30,14 @@ git clone https://github.com/anderswong425/RF-Imaging.git
     5. Eject it again to make changes 
 
 4. Install Python dependencies:
-```
-pip3 install -r requirements.txt
-```
+    ```
+    pip3 install -r requirements.txt
+    ```
 
 ## Running the code
 1. Adjust the parameters(frequency, resolution, denoising weight, ...) by editing main.py
 
 2. Run the real-time system:
-```
-python3 main.py
-```
+    ```
+    python3 main.py
+    ```
