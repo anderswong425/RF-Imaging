@@ -35,16 +35,8 @@ This repository contains the codebase for the RF Imaging System, which utilizes 
     ```
 
 ## Hareware Setup
-- To create the imaging domain, the PlutoSDR boards are strategically placed in an evenly spaced and anticlockwise configuration, as shown in the diagram below:
+- To create the imaging domain, the PlutoSDR boards are placed in an evenly spaced and anticlockwise configuration, as shown in the diagram below:
 ![Alt text](/result/transceiver_config.png)
-
-## Running the code
-1. Adjust the parameters(frequency, resolution, denoising weight, etc.) by editing main.py
-
-2. Run the real-time system:
-    ```
-    python3 main.py
-    ```
 
 ## Script Flow
 The RF Imaging System script follows a designed flow to efficiently capture RF signals and reconstruct images in real-time. Here is an overview of the main steps:
@@ -56,3 +48,11 @@ The RF Imaging System script follows a designed flow to efficiently capture RF s
 3. **Data Collection**: The PlutoSDR boards take turns transmitting signals, while the remaining boards receive these signals. The first collected dataset (**Pinc**) serves as the reference for background subtraction to eliminate noise and artifacts.
 
 4. **Reconstruction and Visualization**: The collected dataset (**Ptot**) and the reference dataset are passed to the reconstruction algorithm and regularization in real_time_visualization function. This process continuously updates the reconstruction and visualizes the real-time images.
+
+## Running the code
+1. Adjust the parameters(frequency, resolution, denoising weight, etc.) by editing main.py
+
+2. Run the real-time system:
+    ```
+    python3 main.py
+    ```
