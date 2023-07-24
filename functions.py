@@ -105,9 +105,6 @@ def data_collection_once(parameters, signal, devices):
     return dataset
 
 
-True
-
-
 def get_device_coordinates(parameters):
     doi_size = parameters['doi_size']
     num_deivces = len(parameters['device_indices'])
