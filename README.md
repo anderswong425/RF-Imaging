@@ -35,7 +35,7 @@ This repository contains the codebase for the RF Imaging System, which utilizes 
     ```
 
 ## Running the code
-1. Adjust the parameters(frequency, resolution, denoising weight, ...) by editing main.py
+1. Adjust the parameters(frequency, resolution, denoising weight, etc.) by editing main.py
 
 2. Run the real-time system:
     ```
