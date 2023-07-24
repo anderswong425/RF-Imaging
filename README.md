@@ -41,3 +41,14 @@ This repository contains the codebase for the RF Imaging System, which utilizes 
     ```
     python3 main.py
     ```
+
+## Script Flow
+The RF Imaging System script follows a designed flow to efficiently capture RF signals and reconstruct images in real-time. Here is an overview of the main steps:
+
+1. **Parameter Initialization**: The system automatically calculates any necessary parameters for the reconstruction process based on the user-defined parameters in the main.py file.
+
+2. **PlutoSDR Initialization**: The system initializes the PlutoSDR boards based on the specified device indices and sets relevant parameters such as frequency, number of samples, gain, and more.
+
+3. **Data Collection**: The PlutoSDR boards take turns transmitting signals, while the remaining boards receive these signals. The first collected dataset (**Pinc**) serves as the reference for background subtraction to eliminate noise and artifacts.
+
+4. **Reconstruction and Visualization**: The collected dataset (**Ptot**) and the reference dataset are passed to the reconstruction algorithm and regularization in real_time_visualization function. This process continuously updates the reconstruction and visualizes the real-time images.
