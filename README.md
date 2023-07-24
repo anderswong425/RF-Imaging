@@ -2,7 +2,7 @@
 
 This repository contains the codebase for the RF Imaging System, which utilizes PlutoSDR for real-time image reconstruction. The system is capable of capturing an environment using received RF signals and reconstructing images based on the signal propagation.
 
-## Setup
+## Software Setup
 1. Clone the repository:
     ```
     git clone https://github.com/anderswong425/RF-Imaging.git
@@ -33,6 +33,10 @@ This repository contains the codebase for the RF Imaging System, which utilizes 
     ```
     pip3 install -r requirements.txt
     ```
+
+## Hareware Setup
+- To create the imaging domain, the PlutoSDR boards are strategically placed in an evenly spaced and anticlockwise configuration, as shown in the diagram below:
+![Alt text](/result/transceiver_config.png)
 
 ## Running the code
 1. Adjust the parameters(frequency, resolution, denoising weight, etc.) by editing main.py
