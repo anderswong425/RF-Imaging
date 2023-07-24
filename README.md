@@ -8,9 +8,9 @@ This repository contains the codebase for the RF Imaging System, which utilizes 
     git clone https://github.com/anderswong425/RF-Imaging.git
     ```
 
-2. Install PludoSRD driver:
+2. Install PlutoSRD driver:
     ```
-    . PludoSRD_driver_installation.sh
+    . PlutoSRD_driver_installation.sh
     ```
 
 3. Update PlutoSDR firmware:
