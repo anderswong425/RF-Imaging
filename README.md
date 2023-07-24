@@ -47,7 +47,7 @@ The RF Imaging System script follows a designed flow to efficiently capture RF s
 
 3. **Data Collection**: The PlutoSDR boards take turns transmitting signals, while the remaining boards receive these signals. The first collected dataset (**Pinc**) serves as the reference for background subtraction to eliminate noise and artifacts.
 
-4. **Reconstruction and Visualization**: The collected dataset (**Ptot**) and the reference dataset are passed to the reconstruction algorithm and regularization in real_time_visualization function. This process continuously updates the reconstruction and visualizes the real-time images.
+4. **Reconstruction and Visualization**: The collected dataset (**Ptot**) and the reference dataset are passed to the reconstruction and regularization algorithms in the real_time_visualization function. This process continuously updates the reconstruction and visualizes the real-time images.
 
 ## Running the code
 1. Adjust the parameters(frequency, resolution, denoising weight, etc.) by editing main.py
