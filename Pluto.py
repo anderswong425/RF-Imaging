@@ -27,7 +27,7 @@ class Pluto:
         self.sdr.rx_buffer_size = int(self.num_samples)
         self.sdr.gain_control_mode_chan0 = 'manual'
         self.sdr.rx_hardwaregain_chan0 = self.receiver_gain
-        self.sdr.sample_rate = self.sample_rate
+        self.sdr.sample_rate = int(self.sample_rate)
 
         self.sdr.tx_destroy_buffer()
         self.sdr.rx_destroy_buffer()
